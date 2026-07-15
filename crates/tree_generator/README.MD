@@ -29,8 +29,8 @@ abgedeckt, bevor die nächste beginnt.
 Axiom + Produktionsregeln → Zeichenkette nach N Iterationen.
 - Eingabe: Axiom (`&str`), Regeln (Symbol → Ersetzungsstring), Iterationstiefe
 - Ausgabe: `String`
-- Zunächst deterministisch (eine Regel pro Symbol), stochastische Varianten
-  (mehrere mögliche Ersetzungen mit Wahrscheinlichkeiten) folgen in Phase 5
+- Zunächst deterministisch (eine Regel pro Symbol); stochastische Varianten
+  siehe Phase 5
 - Testbar rein textuell — keine Geometrie nötig
 
 ### Phase 2 — Turtle-Graphics-Interpretation
@@ -89,8 +89,35 @@ Holz-Voxel-Liste + Segmente → erweiterte `Vec<(IVec3, BlockType)>` mit
   Silhouette verschmelzen (Dedup via `HashSet`, wie in Phase 3).
 
 ### Phase 5 — Parametrische Variation
-- Zufalls-Jitter auf Winkel/Segmentlänge (via `rand`)
-- Stochastische Regelwahl in der Grammatik (Phase 1 erweitern)
+Zufalls-Jitter (Turtle) + stochastische Regelwahl (Grammatik).
+- Eingabe: Grammatik, Turtle-Parameter, `seed: u64`, optional `TurtleJitter`
+- Ausgabe: variierende L-Strings und Segment-Skelette bei gleichem Seed
+  reproduzierbar
+- **Entscheidung — RNG-Threading:** kein `rand::thread_rng()`. Aufrufer erzeugt
+  `StdRng::seed_from_u64(seed)` und reicht `&mut impl Rng` explizit an
+  `expand_random()` und `interpret_with_rng()` weiter (`visualize.rs`: ein
+  gemeinsamer RNG pro Baum für Grammatik, dann Turtle). Gleicher Seed →
+  identischer Baum über Programmstarts; Nachweis via Fingerprint in
+  `examples/visualize.rs` (Baum Seed 1: `15758200525907297904`, zwei Läufe
+  identisch). Voraussetzung für die geplante `generate(seed, params)`-API.
+- **Entscheidung — TurtleJitter:** `TurtleJitter { angle_degrees,
+  step_length_fraction }`. Default `0.0` / `0.0` — `interpret()` bleibt
+  jitter-frei, Phase-2-Tests unverändert grün. Preset
+  `TurtleJitter::TREE_DEFAULT`: `angle_degrees = 5.0` (±5° pro `+/-/&/^`),
+  `step_length_fraction = 0.15` (±15 % pro `F`). Jitter nur bei explizitem RNG
+  und Wert > 0. API: `interpret_with_rng(input, params, jitter, rng)` neben
+  `interpret()`.
+- **Entscheidung — Stochastische Grammatik:** `ProductionRule` mit
+  `Vec<(String, f32)>` (gewichtete Alternativen). `LSystemGrammar::new()` bleibt
+  kompatibel (eine Alternative intern); `with_rules()` für volle Regeln.
+  `expand(depth)` deterministisch (immer erste Alternative);
+  `expand_random(depth, rng)` gewichtete Zufallsauswahl pro Symbol.
+  **Gewichte müssen nicht auf 1.0 normalisiert sein** — nur `weight > 0`
+  zählt; Auswahl proportional zur Gewichtssumme (`roll ∈ [0, Σweight)`).
+- **Referenz-Regelwerke** (`examples/visualize.rs`, Seeds 1–4, Biome-Vorlage):
+  - 2D (Bäume 1–3): `F → F[+F]F[-F]F (3.0) | F[+F][-F]F (2.0) | F[+F]F (1.0)`
+  - 3D (Baum 4): `F → F[+F][&F][-F][^F]F (2.0) | F[+F][&F][-F]F (2.0) |
+    F[+F][&F][^F]F (1.0)`
 
 ### Phase 6 — Visuelle Validierung
 - `examples/visualize.rs`: minimale Bevy-App, spawnt die generierten Voxel

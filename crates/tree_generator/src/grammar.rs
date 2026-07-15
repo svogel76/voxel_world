@@ -1,14 +1,58 @@
 use std::collections::HashMap;
 
-/// Deterministic L-system grammar: one axiom and at most one production per symbol.
-#[derive(Debug, Clone, PartialEq, Eq)]
+use rand::Rng;
+
+/// One or more weighted replacements for an L-system symbol.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProductionRule {
+    alternatives: Vec<(String, f32)>,
+}
+
+impl ProductionRule {
+    pub fn deterministic(replacement: impl Into<String>) -> Self {
+        Self {
+            alternatives: vec![(replacement.into(), 1.0)],
+        }
+    }
+
+    pub fn stochastic(alternatives: Vec<(impl Into<String>, f32)>) -> Self {
+        Self {
+            alternatives: alternatives
+                .into_iter()
+                .map(|(replacement, weight)| (replacement.into(), weight))
+                .collect(),
+        }
+    }
+
+    fn deterministic_replacement(&self) -> &str {
+        self.alternatives
+            .first()
+            .map(|(replacement, _)| replacement.as_str())
+            .unwrap_or("")
+    }
+}
+
+/// L-system grammar with deterministic or weighted stochastic productions.
+#[derive(Debug, Clone, PartialEq)]
 pub struct LSystemGrammar {
     axiom: String,
-    rules: HashMap<char, String>,
+    rules: HashMap<char, ProductionRule>,
 }
 
 impl LSystemGrammar {
     pub fn new(axiom: &str, rules: HashMap<char, String>) -> Self {
+        Self::with_rules(
+            axiom,
+            rules
+                .into_iter()
+                .map(|(symbol, replacement)| {
+                    (symbol, ProductionRule::deterministic(replacement))
+                })
+                .collect(),
+        )
+    }
+
+    pub fn with_rules(axiom: &str, rules: HashMap<char, ProductionRule>) -> Self {
         Self {
             axiom: axiom.to_string(),
             rules,
@@ -16,7 +60,7 @@ impl LSystemGrammar {
     }
 
     /// Expand the axiom for `depth` iterations. Depth 0 returns the axiom unchanged.
-    /// Symbols without a production rule are copied verbatim.
+    /// Always uses the first alternative of each rule (deterministic).
     pub fn expand(&self, depth: u32) -> String {
         if depth == 0 {
             return self.axiom.clone();
@@ -24,25 +68,84 @@ impl LSystemGrammar {
 
         let mut current = self.axiom.clone();
         for _ in 0..depth {
-            current = expand_once(&current, &self.rules);
+            current = expand_once_deterministic(&current, &self.rules);
+        }
+        current
+    }
+
+    /// Expand with weighted random rule selection. Requires an explicit RNG
+    /// (e.g. `StdRng::seed_from_u64(seed)`) for reproducibility.
+    pub fn expand_random(&self, depth: u32, rng: &mut impl Rng) -> String {
+        if depth == 0 {
+            return self.axiom.clone();
+        }
+
+        let mut current = self.axiom.clone();
+        for _ in 0..depth {
+            current = expand_once_random(&current, &self.rules, rng);
         }
         current
     }
 }
 
-fn expand_once(current: &str, rules: &HashMap<char, String>) -> String {
+fn expand_once_deterministic(current: &str, rules: &HashMap<char, ProductionRule>) -> String {
     let mut result = String::with_capacity(current.len());
     for ch in current.chars() {
         match rules.get(&ch) {
-            Some(replacement) => result.push_str(replacement),
+            Some(rule) => result.push_str(rule.deterministic_replacement()),
             None => result.push(ch),
         }
     }
     result
 }
 
+fn expand_once_random(
+    current: &str,
+    rules: &HashMap<char, ProductionRule>,
+    rng: &mut impl Rng,
+) -> String {
+    let mut result = String::with_capacity(current.len());
+    for ch in current.chars() {
+        match rules.get(&ch) {
+            Some(rule) => result.push_str(pick_alternative(rule, rng)),
+            None => result.push(ch),
+        }
+    }
+    result
+}
+
+fn pick_alternative<'a>(rule: &'a ProductionRule, rng: &mut impl Rng) -> &'a str {
+    let positive: Vec<_> = rule
+        .alternatives
+        .iter()
+        .filter(|(_, weight)| *weight > 0.0)
+        .collect();
+
+    if positive.is_empty() {
+        return "";
+    }
+
+    let total: f32 = positive.iter().map(|(_, weight)| weight).sum();
+    let mut roll = rng.gen_range(0.0..total);
+
+    for (replacement, weight) in &positive {
+        roll -= weight;
+        if roll <= 0.0 {
+            return replacement.as_str();
+        }
+    }
+
+    positive
+        .last()
+        .map(|(replacement, _)| replacement.as_str())
+        .unwrap_or("")
+}
+
 #[cfg(test)]
 mod tests {
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+
     use super::*;
 
     fn rules(pairs: &[(&str, &str)]) -> HashMap<char, String> {
@@ -52,10 +155,28 @@ mod tests {
             .collect()
     }
 
+    fn stochastic_rules(pairs: &[(&str, Vec<(&str, f32)>)]) -> HashMap<char, ProductionRule> {
+        pairs
+            .iter()
+            .map(|(symbol, alternatives)| {
+                (
+                    symbol.chars().next().unwrap(),
+                    ProductionRule::stochastic(
+                        alternatives
+                            .iter()
+                            .map(|(replacement, weight)| (*replacement, *weight))
+                            .collect(),
+                    ),
+                )
+            })
+            .collect()
+    }
+
     #[test]
     fn depth_zero_returns_axiom_unchanged() {
         let grammar = LSystemGrammar::new("F", rules(&[("F", "FF")]));
         assert_eq!(grammar.expand(0), "F");
+        assert_eq!(grammar.expand_random(0, &mut StdRng::seed_from_u64(1)), "F");
     }
 
     #[test]
@@ -102,5 +223,56 @@ mod tests {
     fn unbalanced_brackets_pass_through_without_error() {
         let grammar = LSystemGrammar::new("F[+F", rules(&[("F", "G")]));
         assert_eq!(grammar.expand(1), "G[+G");
+    }
+
+    #[test]
+    fn expand_random_is_reproducible_for_same_seed() {
+        let grammar = LSystemGrammar::with_rules(
+            "F",
+            stochastic_rules(&[("F", vec![("A", 1.0), ("B", 1.0)])]),
+        );
+
+        let first = grammar.expand_random(4, &mut StdRng::seed_from_u64(42));
+        let second = grammar.expand_random(4, &mut StdRng::seed_from_u64(42));
+
+        assert_eq!(first, second);
+        assert_ne!(first, "F");
+    }
+
+    #[test]
+    fn expand_random_differs_for_different_seeds() {
+        let grammar = LSystemGrammar::with_rules(
+            "F",
+            stochastic_rules(&[("F", vec![("A", 1.0), ("B", 1.0)])]),
+        );
+
+        let first = grammar.expand_random(6, &mut StdRng::seed_from_u64(1));
+        let second = grammar.expand_random(6, &mut StdRng::seed_from_u64(2));
+
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn expand_random_matches_deterministic_for_single_alternative() {
+        let grammar = LSystemGrammar::with_rules(
+            "F",
+            stochastic_rules(&[("F", vec![("F[+F]F", 1.0)])]),
+        );
+
+        assert_eq!(
+            grammar.expand(2),
+            grammar.expand_random(2, &mut StdRng::seed_from_u64(99))
+        );
+    }
+
+    #[test]
+    fn expand_random_respects_relative_weights() {
+        let grammar = LSystemGrammar::with_rules(
+            "F",
+            stochastic_rules(&[("F", vec![("A", 3.0), ("B", 1.0)])]),
+        );
+
+        let output = grammar.expand_random(1, &mut StdRng::seed_from_u64(7));
+        assert_eq!(output, "A");
     }
 }

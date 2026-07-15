@@ -1,3 +1,6 @@
+use rand::Rng;
+use rand::rngs::StdRng;
+
 use crate::types::{Segment, Vec3};
 
 /// Parameters for turtle interpretation. All angles are in degrees.
@@ -21,6 +24,32 @@ impl Default for TurtleParams {
     }
 }
 
+/// Optional random variation applied during turtle interpretation.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TurtleJitter {
+    /// Maximum absolute yaw/pitch deviation per rotation symbol, in degrees.
+    pub angle_degrees: f32,
+    /// Maximum relative deviation per `F` step (`0.15` = ±15%).
+    pub step_length_fraction: f32,
+}
+
+impl Default for TurtleJitter {
+    fn default() -> Self {
+        Self {
+            angle_degrees: 0.0,
+            step_length_fraction: 0.0,
+        }
+    }
+}
+
+impl TurtleJitter {
+    /// Suggested defaults for natural-looking tree variation (Phase 5).
+    pub const TREE_DEFAULT: Self = Self {
+        angle_degrees: 5.0,
+        step_length_fraction: 0.15,
+    };
+}
+
 /// Interpret an expanded L-system string as a list of 3D line segments.
 ///
 /// Coordinate convention: the turtle starts at the origin facing **+Y** (up).
@@ -30,15 +59,35 @@ impl Default for TurtleParams {
 /// - `[` pushes position, heading, and depth; `]` restores the saved state.
 /// - Any other symbol is ignored.
 pub fn interpret(input: &str, params: &TurtleParams) -> Vec<Segment> {
+    interpret_inner(input, params, &TurtleJitter::default(), None::<&mut StdRng>)
+}
+
+/// Interpret with optional jitter. Randomness is applied only when `rng` is
+/// `Some` and the corresponding jitter amount is greater than zero.
+pub fn interpret_with_rng<R: Rng + ?Sized>(
+    input: &str,
+    params: &TurtleParams,
+    jitter: &TurtleJitter,
+    rng: &mut R,
+) -> Vec<Segment> {
+    interpret_inner(input, params, jitter, Some(rng))
+}
+
+fn interpret_inner<R: Rng + ?Sized>(
+    input: &str,
+    params: &TurtleParams,
+    jitter: &TurtleJitter,
+    mut rng: Option<&mut R>,
+) -> Vec<Segment> {
     let mut segments = Vec::new();
     let mut state = TurtleState::initial();
     let mut stack = Vec::new();
-    let angle_rad = params.angle_degrees.to_radians();
 
     for ch in input.chars() {
         match ch {
             'F' => {
-                let end = state.position + state.direction * params.step_length;
+                let step_length = jittered_step_length(params.step_length, jitter, rng.as_deref_mut());
+                let end = state.position + state.direction * step_length;
                 segments.push(Segment {
                     start: state.position,
                     end,
@@ -47,10 +96,22 @@ pub fn interpret(input: &str, params: &TurtleParams) -> Vec<Segment> {
                 });
                 state.position = end;
             }
-            '+' => state.direction = rotate_yaw(state.direction, angle_rad),
-            '-' => state.direction = rotate_yaw(state.direction, -angle_rad),
-            '&' => state.direction = rotate_pitch(state.direction, angle_rad),
-            '^' => state.direction = rotate_pitch(state.direction, -angle_rad),
+            '+' => {
+                let angle_rad = jittered_angle_radians(params.angle_degrees, jitter, rng.as_deref_mut());
+                state.direction = rotate_yaw(state.direction, angle_rad);
+            }
+            '-' => {
+                let angle_rad = jittered_angle_radians(params.angle_degrees, jitter, rng.as_deref_mut());
+                state.direction = rotate_yaw(state.direction, -angle_rad);
+            }
+            '&' => {
+                let angle_rad = jittered_angle_radians(params.angle_degrees, jitter, rng.as_deref_mut());
+                state.direction = rotate_pitch(state.direction, angle_rad);
+            }
+            '^' => {
+                let angle_rad = jittered_angle_radians(params.angle_degrees, jitter, rng.as_deref_mut());
+                state.direction = rotate_pitch(state.direction, -angle_rad);
+            }
             '[' => {
                 stack.push(state);
                 state.depth += 1;
@@ -82,6 +143,40 @@ impl TurtleState {
             depth: 0,
         }
     }
+}
+
+fn jittered_step_length<R: Rng + ?Sized>(
+    base_step_length: f32,
+    jitter: &TurtleJitter,
+    rng: Option<&mut R>,
+) -> f32 {
+    let Some(rng) = rng else {
+        return base_step_length;
+    };
+
+    if jitter.step_length_fraction <= 0.0 {
+        return base_step_length;
+    }
+
+    let factor = 1.0 + rng.gen_range(-jitter.step_length_fraction..=jitter.step_length_fraction);
+    (base_step_length * factor).max(0.0)
+}
+
+fn jittered_angle_radians<R: Rng + ?Sized>(
+    base_angle_degrees: f32,
+    jitter: &TurtleJitter,
+    rng: Option<&mut R>,
+) -> f32 {
+    let Some(rng) = rng else {
+        return base_angle_degrees.to_radians();
+    };
+
+    if jitter.angle_degrees <= 0.0 {
+        return base_angle_degrees.to_radians();
+    }
+
+    let offset = rng.gen_range(-jitter.angle_degrees..=jitter.angle_degrees);
+    (base_angle_degrees + offset).max(0.0).to_radians()
 }
 
 fn segment_thickness(params: &TurtleParams, depth: u32) -> f32 {
@@ -125,6 +220,9 @@ fn normalize_or_fallback(vector: Vec3, fallback: Vec3) -> Vec3 {
 
 #[cfg(test)]
 mod tests {
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+
     use super::*;
 
     fn default_params() -> TurtleParams {
@@ -274,5 +372,88 @@ mod tests {
 
         assert_eq!(segments[0].end, Vec3::new(0.0, 2.0, 0.0));
         assert_eq!(segments[0].thickness, 0.5);
+    }
+
+    #[test]
+    fn zero_jitter_matches_deterministic_interpret_even_with_rng() {
+        let params = default_params();
+        let deterministic = interpret("F[+F]F", &params);
+        let mut rng = StdRng::seed_from_u64(42);
+
+        let jittered = interpret_with_rng(
+            "F[+F]F",
+            &params,
+            &TurtleJitter::default(),
+            &mut rng,
+        );
+
+        assert_eq!(deterministic, jittered);
+    }
+
+    #[test]
+    fn jitter_without_rng_matches_deterministic_interpret() {
+        let params = default_params();
+        let deterministic = interpret("F[+F]F", &params);
+
+        let jittered = interpret_inner(
+            "F[+F]F",
+            &params,
+            &TurtleJitter::TREE_DEFAULT,
+            None::<&mut StdRng>,
+        );
+
+        assert_eq!(deterministic, jittered);
+    }
+
+    #[test]
+    fn jitter_is_reproducible_for_same_seed() {
+        let params = TurtleParams {
+            angle_degrees: 25.0,
+            ..Default::default()
+        };
+        let jitter = TurtleJitter::TREE_DEFAULT;
+
+        let first = interpret_with_rng(
+            "F[+F]F[-F]F",
+            &params,
+            &jitter,
+            &mut StdRng::seed_from_u64(42),
+        );
+        let second = interpret_with_rng(
+            "F[+F]F[-F]F",
+            &params,
+            &jitter,
+            &mut StdRng::seed_from_u64(42),
+        );
+
+        assert_eq!(first.len(), second.len());
+        for (left, right) in first.iter().zip(second.iter()) {
+            assert_segment_approx(left, right);
+        }
+        assert_ne!(first, interpret("F[+F]F[-F]F", &params));
+    }
+
+    #[test]
+    fn jitter_differs_for_different_seeds() {
+        let params = TurtleParams {
+            angle_degrees: 25.0,
+            ..Default::default()
+        };
+        let jitter = TurtleJitter::TREE_DEFAULT;
+
+        let first = interpret_with_rng(
+            "F[+F]F[-F]F",
+            &params,
+            &jitter,
+            &mut StdRng::seed_from_u64(1),
+        );
+        let second = interpret_with_rng(
+            "F[+F]F[-F]F",
+            &params,
+            &jitter,
+            &mut StdRng::seed_from_u64(2),
+        );
+
+        assert_ne!(first, second);
     }
 }
