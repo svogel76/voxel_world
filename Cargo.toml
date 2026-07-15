@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/tree_generator",
+    # "crates/grass_generator",
+    # "crates/rock_generator",
+    # "crates/world_generator",
+]
+
+[workspace.dependencies]
+rand = "0.8"
+bevy = "0.19"
