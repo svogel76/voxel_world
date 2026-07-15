@@ -78,6 +78,16 @@ Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
 - [ ] Einfachere prozedurale Form (kein volles L-System nötig, z.B. Billboard-Quads
   oder simple Voxel-Cluster) — bewusst geringerer Aufwand als Bäume
 - [ ] Dichte-Noise für natürliche Verteilung statt Gleichverteilung
+- **Entscheidung:** Statische Kreuzquads (zwei senkrecht zueinander stehende
+  Ebenen, per Zufallsrotation um Y variiert — wie in Minecraft), kein
+  kamera-ausgerichtetes Echtzeit-Billboarding, keine Micro-Voxel-Cluster.
+  Begründung: passt zum Grundsatz "Atmosphäre durch Licht/Textur, nicht durch
+  Geometrie" (siehe Concept-Art-Analyse ganz am Anfang), und ist bei
+  tausenden Grasbüscheln pro Chunk performance-kritisch — 2 Quads (4
+  Dreiecke) pro Büschel statt Dutzender/Hunderter Voxel. `grass_generator`
+  selbst liefert nur Platzierungsdaten (Position, Y-Rotation, Skalierung,
+  Variante); die eigentliche Quad-Geometrie entsteht erst in der
+  Bevy-Integrationsschicht.
 
 ### Steingenerator
 - [ ] Einfache Voxel-Cluster-Formen mit Größen-/Rotationsvariation

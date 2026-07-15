@@ -2811,6 +2811,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "grass_generator"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "rand 0.8.7",
+]
+
+[[package]]
 name = "grid"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
