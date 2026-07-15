@@ -124,14 +124,16 @@ Zufalls-Jitter (Turtle) + stochastische Regelwahl (Grammatik).
   als einfache Cubes
 - Start: `cargo run -p tree_generator --example visualize`
 
-## Öffentliche API (Zielbild)
+## Öffentliche API
 
 ```rust
 pub fn generate(seed: u64, params: &TreeParams) -> Vec<(IVec3, BlockType)>;
 ```
 
-Wird erst nach Phase 4 final feststehen — Zwischenstände sind bewusst
-kleinere, testbare Funktionen pro Phase.
+`TreeParams` bündelt Grammatik, Turtle, Jitter, Voxel-Shape und Leaf-Placement.
+Presets: `TreeParams::default()` / `generic_2d()`, `generic_3d()`.
+Einzelbausteine (`LSystemGrammar`, `interpret`, `voxelize`, …) bleiben öffentlich
+für Experimente und Tests.
 
 ## Tests
 

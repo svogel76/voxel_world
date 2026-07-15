@@ -1,7 +1,7 @@
-//! Bevy preview of the tree generator (Phases 1–5).
+//! Bevy preview of the tree generator via [`tree_generator::generate`].
 //!
-//! Spawns four trees with different L-system / turtle parameters side by side.
-//! Each tree uses a fixed seed, stochastic grammar expansion, and turtle jitter.
+//! Spawns four trees with different `TreeParams` presets side by side.
+//! Each tree uses a fixed seed passed to `generate()`.
 //!
 //! Run:
 //! ```text
@@ -14,17 +14,12 @@
 //! - WASD: move, Q/E: down/up, Shift: run, scroll: speed
 //! - Right-click or M: capture mouse for look-around
 
-use std::collections::HashMap;
-
 use bevy::{
     camera_controller::free_camera::{FreeCamera, FreeCameraPlugin},
     prelude::*,
 };
-use rand::rngs::StdRng;
-use rand::SeedableRng;
 use tree_generator::{
-    add_leaves, interpret_with_rng, voxelize_with_shape, BlockType, CrossSectionShape, IVec3,
-    LeafPlacement, LSystemGrammar, ProductionRule, TurtleJitter, TurtleParams,
+    generate, BlockType, CrossSectionShape, IVec3, TreeParams, TurtleParams,
 };
 
 #[derive(Resource, Clone, Copy)]
@@ -91,99 +86,77 @@ fn parse_shape(value: &str) -> CrossSectionShape {
     }
 }
 
-struct StochasticRule {
-    symbol: &'static str,
-    alternatives: &'static [(&'static str, f32)],
-}
-
 struct TreePreset {
     seed: u64,
     offset: Vec3,
-    axiom: &'static str,
-    rules: &'static [StochasticRule],
-    depth: u32,
-    params: TurtleParams,
+    params: TreeParams,
     wood_color: Color,
 }
 
-/// Shared 2D branching rule: symmetric bushy trunk, forked pair, or one-sided spur.
-const STOCHASTIC_2D_F: StochasticRule = StochasticRule {
-    symbol: "F",
-    alternatives: &[
-        ("F[+F]F[-F]F", 3.0),
-        ("F[+F][-F]F", 2.0),
-        ("F[+F]F", 1.0),
-    ],
-};
-
-/// 3D branching rule: full pitch set, without forward pitch, or without one yaw branch.
-const STOCHASTIC_3D_F: StochasticRule = StochasticRule {
-    symbol: "F",
-    alternatives: &[
-        ("F[+F][&F][-F][^F]F", 2.0),
-        ("F[+F][&F][-F]F", 2.0),
-        ("F[+F][&F][^F]F", 1.0),
-    ],
-};
-
-const TREE_PRESETS: &[TreePreset] = &[
-    TreePreset {
-        seed: 1,
-        offset: Vec3::new(-27.0, 0.0, 0.0),
-        axiom: "F",
-        rules: &[STOCHASTIC_2D_F],
-        depth: 4,
-        params: TurtleParams {
-            step_length: 1.0,
-            angle_degrees: 22.0,
-            base_thickness: 2.0,
-            taper_ratio: 0.72,
+fn tree_presets(settings: &PreviewSettings) -> [TreePreset; 4] {
+    [
+        TreePreset {
+            seed: 1,
+            offset: Vec3::new(-27.0, 0.0, 0.0),
+            params: TreeParams {
+                turtle: TurtleParams {
+                    angle_degrees: 22.0,
+                    base_thickness: settings.base_thickness,
+                    ..TreeParams::generic_2d().turtle
+                },
+                cross_section: settings.shape,
+                depth: 4,
+                ..TreeParams::generic_2d()
+            },
+            wood_color: Color::srgb(0.45, 0.28, 0.12),
         },
-        wood_color: Color::srgb(0.45, 0.28, 0.12),
-    },
-    TreePreset {
-        seed: 2,
-        offset: Vec3::new(-9.0, 0.0, 0.0),
-        axiom: "F",
-        rules: &[STOCHASTIC_2D_F],
-        depth: 3,
-        params: TurtleParams {
-            step_length: 1.0,
-            angle_degrees: 35.0,
-            base_thickness: 1.5,
-            taper_ratio: 0.65,
+        TreePreset {
+            seed: 2,
+            offset: Vec3::new(-9.0, 0.0, 0.0),
+            params: TreeParams {
+                turtle: TurtleParams {
+                    angle_degrees: 35.0,
+                    base_thickness: settings.base_thickness,
+                    taper_ratio: 0.65,
+                    ..TreeParams::generic_2d().turtle
+                },
+                cross_section: settings.shape,
+                depth: 3,
+                ..TreeParams::generic_2d()
+            },
+            wood_color: Color::srgb(0.55, 0.35, 0.18),
         },
-        wood_color: Color::srgb(0.55, 0.35, 0.18),
-    },
-    TreePreset {
-        seed: 3,
-        offset: Vec3::new(9.0, 0.0, 0.0),
-        axiom: "F",
-        rules: &[STOCHASTIC_2D_F],
-        depth: 4,
-        params: TurtleParams {
-            step_length: 1.0,
-            angle_degrees: 30.0,
-            base_thickness: 1.8,
-            taper_ratio: 0.7,
+        TreePreset {
+            seed: 3,
+            offset: Vec3::new(9.0, 0.0, 0.0),
+            params: TreeParams {
+                turtle: TurtleParams {
+                    angle_degrees: 30.0,
+                    base_thickness: settings.base_thickness,
+                    taper_ratio: 0.7,
+                    ..TreeParams::generic_2d().turtle
+                },
+                cross_section: settings.shape,
+                depth: 4,
+                ..TreeParams::generic_2d()
+            },
+            wood_color: Color::srgb(0.38, 0.24, 0.10),
         },
-        wood_color: Color::srgb(0.38, 0.24, 0.10),
-    },
-    TreePreset {
-        seed: 4,
-        offset: Vec3::new(27.0, 0.0, 0.0),
-        axiom: "F",
-        rules: &[STOCHASTIC_3D_F],
-        depth: 3,
-        params: TurtleParams {
-            step_length: 1.0,
-            angle_degrees: 28.0,
-            base_thickness: 1.8,
-            taper_ratio: 0.7,
+        TreePreset {
+            seed: 4,
+            offset: Vec3::new(27.0, 0.0, 0.0),
+            params: TreeParams {
+                turtle: TurtleParams {
+                    base_thickness: settings.base_thickness,
+                    ..TreeParams::generic_3d().turtle
+                },
+                cross_section: settings.shape,
+                ..TreeParams::generic_3d()
+            },
+            wood_color: Color::srgb(0.42, 0.32, 0.22),
         },
-        wood_color: Color::srgb(0.42, 0.32, 0.22),
-    },
-];
+    ]
+}
 
 fn setup_scene(
     settings: Res<PreviewSettings>,
@@ -198,14 +171,19 @@ fn setup_scene(
         ..default()
     });
 
-    for preset in TREE_PRESETS {
+    for preset in tree_presets(&settings) {
         let wood_material = materials.add(StandardMaterial {
             base_color: preset.wood_color,
             perceptual_roughness: 0.9,
             ..default()
         });
 
-        let voxels = generate_tree_voxels(preset, &settings);
+        let offset = voxel_offset(preset.offset);
+        let voxels = generate(preset.seed, &preset.params)
+            .into_iter()
+            .map(|(position, block_type)| (position + offset, block_type))
+            .collect::<Vec<_>>();
+
         if preset.seed == 1 {
             eprintln!(
                 "determinism fingerprint tree seed 1: {}",
@@ -264,7 +242,7 @@ fn spawn_help_text(mut commands: Commands, settings: Res<PreviewSettings>) {
         },
         children![Text::new(format!(
             concat!(
-                "Preview: shape={} thickness={:.1} | Phase 5: seeds 1-4, stochastic + jitter\n",
+                "Preview: shape={} thickness={:.1} | generate() API, seeds 1-4\n",
                 "CLI: --shape sphere|cube  --thickness 2|4\n",
                 "FreeCamera: WASD move | Q/E up/down | Shift run | Scroll speed\n",
                 "Right-click or M: mouse look\n",
@@ -274,49 +252,6 @@ fn spawn_help_text(mut commands: Commands, settings: Res<PreviewSettings>) {
             settings.base_thickness
         ))],
     ));
-}
-
-fn build_grammar(preset: &TreePreset) -> LSystemGrammar {
-    let rules = preset
-        .rules
-        .iter()
-        .map(|rule| {
-            (
-                rule.symbol.chars().next().expect("rule symbol"),
-                ProductionRule::stochastic(
-                    rule.alternatives
-                        .iter()
-                        .map(|(replacement, weight)| (*replacement, *weight))
-                        .collect(),
-                ),
-            )
-        })
-        .collect::<HashMap<_, _>>();
-
-    LSystemGrammar::with_rules(preset.axiom, rules)
-}
-
-fn generate_tree_voxels(
-    preset: &TreePreset,
-    settings: &PreviewSettings,
-) -> Vec<(IVec3, BlockType)> {
-    let grammar = build_grammar(preset);
-    let mut rng = StdRng::seed_from_u64(preset.seed);
-    let l_string = grammar.expand_random(preset.depth, &mut rng);
-
-    let mut params = preset.params;
-    params.base_thickness = settings.base_thickness;
-
-    let segments =
-        interpret_with_rng(&l_string, &params, &TurtleJitter::TREE_DEFAULT, &mut rng);
-    let offset = voxel_offset(preset.offset);
-    let wood = voxelize_with_shape(&segments, settings.shape);
-    let voxels = add_leaves(&wood, &segments, LeafPlacement::default());
-
-    voxels
-        .into_iter()
-        .map(|(position, block_type)| (position + offset, block_type))
-        .collect()
 }
 
 fn voxel_fingerprint(voxels: &[(IVec3, BlockType)]) -> u64 {
