@@ -61,8 +61,32 @@ Liniensegmente → Voxel-Positionen.
   zum kantigen Blockstil. `Sphere` bleibt im Code als Alternative erhalten.
 
 ### Phase 4 — Blätter/Laubkronen
-Voxel-Cluster an den Astenden (Endpunkte ohne Folgesegment).
-- Ausgabe erweitert die Voxel-Liste aus Phase 3 um `BlockType::Leaf`-Cluster
+Holz-Voxel-Liste + Segmente → erweiterte `Vec<(IVec3, BlockType)>` mit
+`BlockType::Leaf`-Clustern.
+- Eingabe: Holz-Voxel aus Phase 3, `Vec<Segment>` aus Phase 2
+- API: `add_leaves(wood_voxels, segments, LeafPlacement)`
+- Astspitze = Segment-Endpunkt (voxel-gerundet), der nicht Start eines anderen
+  Segments ist
+- Wood-Vorrang: Blätter werden nie auf bestehenden Holz-Positionen platziert
+- **Entscheidung — Tiefen-Filter (relativ pro Baum):** Nur Astenden der
+  äußersten Verzweigungsebenen bekommen Blätter. Pro Baum:
+  `max_depth = max(segment.depth)`; Parameter `LeafPlacement { crown_levels }`
+  (Default: `2`); Schwellwert
+  `min_leaf_depth = max_depth - (crown_levels - 1)` (`saturating_sub`).
+  Nur Tips mit `ending_segment.depth >= min_leaf_depth` werden beblättert.
+  `LeafPlacement::ALL` (`crown_levels = u32::MAX`) entspricht dem frühen
+  Verhalten (alle Astenden). Ohne Filter erzeugten Grammatiken wie
+  `F → F[+F]F[-F]F` Blätter an jeder Verzweigungsebene — wirkte wie
+  Moosbewuchs über den ganzen Stamm statt wie ein Blätterdach an der Krone.
+- **Entscheidung — Cluster-Radius (astdicke-abhängig):**
+  `leaf_radius = voxel_radius(thickness_at_tip) + LEAF_CROWN_EXTENSION`.
+  `voxel_radius` wie in Phase 3 (`0` bei `thickness <= 1.0`, sonst
+  `ceil(thickness / 2)`). Konstante `LEAF_CROWN_EXTENSION = 3`. Beispiele:
+  `thickness 1.0 → leaf_radius 3`; `thickness 4.0 → branch_radius 2,
+  leaf_radius 5`. Kugelförmiger Cluster um die Astspitze. Ein fixer Radius 1
+  ergab isolierte Punkt-Klumpen; der größere, dickenabhängige Radius lässt
+  benachbarte Cluster überlappen und zu einer zusammenhängenden Kronen-
+  Silhouette verschmelzen (Dedup via `HashSet`, wie in Phase 3).
 
 ### Phase 5 — Parametrische Variation
 - Zufalls-Jitter auf Winkel/Segmentlänge (via `rand`)

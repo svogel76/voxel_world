@@ -1,4 +1,4 @@
-//! Bevy preview of the wood skeleton (Phases 1–3), without leaves.
+//! Bevy preview of the tree generator (Phases 1–4).
 //!
 //! Spawns four trees with different L-system / turtle parameters side by side.
 //!
@@ -20,7 +20,8 @@ use bevy::{
     prelude::*,
 };
 use tree_generator::{
-    interpret, voxelize, BlockType, CrossSectionShape, IVec3, LSystemGrammar, TurtleParams,
+    add_leaves, interpret, voxelize_with_shape, BlockType, CrossSectionShape, IVec3,
+    LeafPlacement, LSystemGrammar, TurtleParams,
 };
 
 #[derive(Resource, Clone, Copy)]
@@ -32,7 +33,7 @@ struct PreviewSettings {
 impl Default for PreviewSettings {
     fn default() -> Self {
         Self {
-            shape: CrossSectionShape::Sphere,
+            shape: CrossSectionShape::Cube,
             base_thickness: 4.0,
         }
     }
@@ -81,8 +82,8 @@ fn parse_shape(value: &str) -> CrossSectionShape {
         "cube" | "square" => CrossSectionShape::Cube,
         "sphere" | "ball" => CrossSectionShape::Sphere,
         other => {
-            eprintln!("unknown shape '{other}', using sphere");
-            CrossSectionShape::Sphere
+            eprintln!("unknown shape '{other}', using cube");
+            CrossSectionShape::Cube
         }
     }
 }
@@ -158,19 +159,28 @@ fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let cube_mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+    let leaf_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.22, 0.58, 0.18),
+        perceptual_roughness: 0.95,
+        ..default()
+    });
 
     for preset in TREE_PRESETS {
-        let material = materials.add(StandardMaterial {
+        let wood_material = materials.add(StandardMaterial {
             base_color: preset.wood_color,
             perceptual_roughness: 0.9,
             ..default()
         });
 
         for (position, block_type) in generate_tree_voxels(preset, &settings) {
-            let _ = block_type;
+            let material = match block_type {
+                BlockType::Wood => wood_material.clone(),
+                BlockType::Leaf => leaf_material.clone(),
+            };
+
             commands.spawn((
                 Mesh3d(cube_mesh.clone()),
-                MeshMaterial3d(material.clone()),
+                MeshMaterial3d(material),
                 Transform::from_translation(voxel_to_bevy_vec3(position)),
             ));
         }
@@ -213,7 +223,7 @@ fn spawn_help_text(mut commands: Commands, settings: Res<PreviewSettings>) {
         },
         children![Text::new(format!(
             concat!(
-                "Preview: shape={} thickness={:.1}\n",
+                "Preview: shape={} thickness={:.1} | wood + leaf clusters\n",
                 "CLI: --shape sphere|cube  --thickness 2|4\n",
                 "FreeCamera: WASD move | Q/E up/down | Shift run | Scroll speed\n",
                 "Right-click or M: mouse look\n",
@@ -243,8 +253,10 @@ fn generate_tree_voxels(
 
     let segments = interpret(&l_string, &params);
     let offset = voxel_offset(preset.offset);
+    let wood = voxelize_with_shape(&segments, settings.shape);
+    let voxels = add_leaves(&wood, &segments, LeafPlacement::default());
 
-    voxelize(&segments, settings.shape)
+    voxels
         .into_iter()
         .map(|(position, block_type)| (position + offset, block_type))
         .collect()

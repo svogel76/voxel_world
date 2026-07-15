@@ -3,6 +3,7 @@ pub use glam::Vec3;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BlockType {
     Wood,
+    Leaf,
 }
 
 #[derive(Debug, Clone, PartialEq)]
