@@ -92,6 +92,19 @@ Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
 ### Steingenerator
 - [ ] Einfache Voxel-Cluster-Formen mit Größen-/Rotationsvariation
 - [ ] Verteilungsregel an Terrain-Steigung koppeln (z.B. mehr Steine an Hängen)
+- **Entscheidung — Technik:** 3D-Noise-Schwellenwert (Perlin/Simplex-Feld über
+  eine Box, Voxel wird "Stein" wenn Noise-Wert > Schwelle), statt Ellipsoid
+  mit Rand-Jitter oder 3D-Random-Walk. Begründung: Ellipsoid-Jitter behält
+  einen glatten, runden Kern (nur der Rand wird uneben) — passt nicht zum
+  Blockstil, besonders bei größeren Boulder. Noise-Schwellenwert hat keinen
+  Rundheits-Bias, die Kantigkeit ist direkt über die Noise-Frequenz steuerbar,
+  und das Prinzip ist aus der Terrain-Heightmap (Phase 0) bereits bekannt
+  (nur diesmal 3D statt 2D).
+- **Scope-Abgrenzung:** `rock_generator` ist NUR für kleine, verstreute
+  Boulder zuständig. Große, bewusst geformte Monumente/Steinpfeiler mit
+  eingeritzten Symbolen (wie im Concept Art, gestapelte rechteckige Blöcke)
+  gehören NICHT hierher — das wäre ein eigener, späterer
+  Struktur-/Ruinen-Generator (noch nicht in Arbeit) oder feste Hand-Prefabs.
 
 ### Platzierungslogik (gilt für alle Sub-Generatoren)
 - [ ] Zugriff auf Terrain-Höhe an Position (X,Z) aus bevy_voxel_world abfragen

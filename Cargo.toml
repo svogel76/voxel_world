@@ -2,8 +2,8 @@
 resolver = "2"
 members = ["crates/grass_generator",
     "crates/tree_generator",
-    "crates/grass_generator",
-    # "crates/rock_generator",
+    "crates/grass_generator", "crates/rock_generator",
+    "crates/rock_generator",
     # "crates/world_generator",
 ]
 
