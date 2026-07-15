@@ -11,14 +11,19 @@ als `dev-dependency` eingebunden, sichtbar ausschließlich für
 `examples/visualize.rs` — die visuelle Validierung, das Äquivalent zur
 Unity-Testszene.
 
-## Abhängigkeiten — bewusst minimal
+## Abhängigkeiten
 
-Nur `rand` (für Zufallsvariation: Winkel-Jitter, stochastische Regelwahl).
-Alle anderen Bausteine (L-System-Grammatik, Turtle-Interpretation,
-Voxelisierung) werden **selbst implementiert**, auch wenn fertige Crates
-dafür existieren (z.B. `lindenmayer`, `line_drawing`) — bewusste Entscheidung,
-um externe Abhängigkeiten nur dort einzugehen, wo die Komplexität es
-rechtfertigt (wie bei Avian3D), nicht bei überschaubarer Logik.
+**Erlaubt ohne Vorab-Diskussion** (Fundament-Crates, geringes Risiko):
+- `glam` — `Vec3`/`IVec3` und Vektor-Rotationen in der öffentlichen API;
+  gleiche Version wie Bevy 0.19 (`0.32`), zieht kein Bevy rein
+- `rand` — Zufallsvariation (Phase 5: Winkel-Jitter, stochastische Regelwahl)
+
+**Domänenlogik selbst implementiert**, auch wenn fertige Crates existieren
+(z.B. `lindenmayer`, `line_drawing`): L-System-Grammatik, Turtle-Interpretation,
+Voxelisierung. Das ist bewusst Lern- und Kontrollfläche.
+
+**Weitere 3rd-Party-Crates** (z.B. Avian3D) vorher gemeinsam abwägen:
+Aufwand, Risiko, was intern abstrahiert wird, Alternativen.
 
 ## Entwicklungsphasen
 
@@ -35,25 +40,32 @@ Axiom + Produktionsregeln → Zeichenkette nach N Iterationen.
 
 ### Phase 2 — Turtle-Graphics-Interpretation
 Zeichenkette → Liste von 3D-Liniensegmenten ("Skelett").
-- Eingabe: die generierte Zeichenkette, Schrittlänge, Rotationswinkel
+- Eingabe: die generierte Zeichenkette, Schrittlänge, Rotationswinkel,
+  `base_thickness`, `taper_ratio`
 - Ausgabe: `Vec<Segment>` mit
 
 ```rust
 struct Segment {
-    start: Vec3,
-    end: Vec3,
+    start: glam::Vec3,
+    end: glam::Vec3,
     thickness: f32,
     depth: u32,
 }
 ```
 
 - Verzweigungen über Stack (`[` = push, `]` = pop)
+- **`depth`**: Verzweigungstiefe (Stamm = 0), steigt bei jedem `[` um 1
+- **`thickness`**: finale Segmentdicke — Verjüngung wird **hier** berechnet:
+  `base_thickness * taper_ratio^depth`. Phase 3 voxelisiert nur noch entlang
+  `segment.thickness` (keine zweite Verjüngungsformel).
 
 ### Phase 3 — Voxelisierung
 Liniensegmente → Voxel-Positionen.
 - Eingabe: `Vec<Segment>`
 - Ausgabe: `Vec<(IVec3, BlockType)>` (z.B. `BlockType::Wood`)
-- Selbst geschriebener 3D-Line-Walk-Algorithmus, Dicke nach `thickness`/`depth`
+- Selbst geschriebener 3D-Line-Walk-Algorithmus; Querschnitt ausschließlich
+  aus `segment.thickness` (bereits verjüngt). `depth` wird hier nicht erneut
+  für die Dicke verwendet — nur ggf. in späteren Phasen (z.B. Blätter).
 
 ### Phase 4 — Blätter/Laubkronen
 Voxel-Cluster an den Astenden (Endpunkte ohne Folgesegment).

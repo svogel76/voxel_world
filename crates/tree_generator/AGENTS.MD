@@ -10,10 +10,11 @@ Vorgaben.
   Rückmeldung warten — nicht mehrere Phasen in einer Session durchziehen.
 - **Vor jeder neuen Phase**: kurz erklären, was diese Phase konzeptionell
   tut und warum sie so geschnitten ist, bevor Code entsteht.
-- **Keine externen Crates außer `rand`.** L-System-Grammatik,
-  Turtle-Interpretation und Voxelisierung werden selbst implementiert,
-  auch wenn fertige Crates existieren — bewusste Entscheidung gegen
-  unnötige externe Abhängigkeiten bei überschaubarer Komplexität.
+- **Fundament-Crates ohne Vorab-Diskussion:** `glam` (Vektor-/Gitter-Mathe),
+  `rand` (Zufall). **Domänenlogik selbst implementieren:** L-System-Grammatik,
+  Turtle-Interpretation, Voxelisierung — auch wenn fertige Crates existieren.
+- **Weitere 3rd-Party-Crates vorher besprechen** und Pro/Contra abwägen
+  (Aufwand, Risiko, Blackbox-Anteil, Alternativen).
 
 ## Tests — verbindlicher Bestandteil jeder Phase
 

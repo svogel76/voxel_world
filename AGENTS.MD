@@ -29,11 +29,17 @@ spätere Phasen, keine fertigen Lösungen ungefragt vorwegnehmen.
    Bevy ausschließlich als `dev-dependency` (für `examples/`) einbinden,
    niemals unter `[dependencies]`. Reine Logik rein, Datenstrukturen raus.
 8. **Erkläre bei Nutzung von Crates/Plugins, was intern abstrahiert wird.**
-   Wenn ein fertiges Crate (z.B. `bevy_voxel_world`, `rand`, später
-   `avian3d`) verwendet wird: kurz einordnen, was es im Hintergrund tut,
-   damit keine Blackbox-Gefühl entsteht.
-9. **Kein Zeitdruck, keine Phasen überspringen.** Aktuelle Phase erst
-   abschließen (siehe Roadmap), bevor die nächste beginnt.
+   Wenn ein fertiges Crate verwendet wird: kurz einordnen, was es im
+   Hintergrund tut, damit kein Blackbox-Gefühl entsteht.
+9. **Abhängigkeiten: Fundament vs. Domäne vs. Diskussion.**
+   - Fundament-Crates (`glam`, `rand`) sind erlaubt — klein, stabil,
+     kein Ersatz für Domänenlogik.
+   - Domänenlogik in Generatoren (L-System, Turtle, Voxel-Walk) selbst
+     implementieren, auch wenn fertige Crates existieren.
+   - Weitere 3rd-Party-Crates (z.B. `avian3d`, `bevy_voxel_world`) vorher
+     gemeinsam besprechen: Aufwand, Risiko, Pro/Contra.
+10. **Kein Zeitdruck, keine Phasen überspringen.** Aktuelle Phase erst
+    abschließen (siehe Roadmap), bevor die nächste beginnt.
 
 ## Kontext
 

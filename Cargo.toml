@@ -9,4 +9,5 @@ members = [
 
 [workspace.dependencies]
 rand = "0.8"
+glam = "0.32"
 bevy = "0.19"
