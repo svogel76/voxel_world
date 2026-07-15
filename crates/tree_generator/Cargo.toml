@@ -5,3 +5,6 @@ edition = "2024"
 
 [dependencies]
 glam = { workspace = true }
+
+[dev-dependencies]
+bevy = { workspace = true, features = ["free_camera"] }
