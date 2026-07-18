@@ -1,0 +1,12 @@
+[package]
+name = "world_generator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Path deps are reserved for Phase 4 orchestration; unused in Phase 1.
+tree_generator = { path = "../tree_generator" }
+grass_generator = { path = "../grass_generator" }
+rock_generator = { path = "../rock_generator" }
+rand = { workspace = true }
+glam = { workspace = true }

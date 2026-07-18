@@ -60,6 +60,12 @@ wird ein eigenständiges Crate in einem gemeinsamen Cargo Workspace — kein Mon
 - [ ] Jedes Biom bekommt eigene Parameter (Baumdichte, Baumarten/L-System-Regelsätze,
   Grasdichte, Steindichte), die an die jeweiligen Sub-Generatoren weitergereicht werden —
   der Weltgenerator entscheidet *was* und *wie viel*, der Generator entscheidet *wie*
+- **Entscheidung — Terrain-Höhen-Zugriff:** `world_generator` bleibt Bevy-frei und
+  hängt nicht direkt von `bevy_voxel_world` ab. Terrain-Höhe (und später Hangsteigung
+  für Steine) wird über ein austauschbares `TerrainHeightSource`-Trait abstrahiert.
+  Für Entwicklung/Tests jetzt: einfache Test-Implementierung (z.B. eigene Platzhalter-
+  Noise-Funktion). Die echte Anbindung an `bevy_voxel_world` entsteht erst später im
+  `voxel_game`-Crate, nicht in `world_generator` selbst.
 
 ### Baumgenerator (mit Formgenerierung, nicht nur Platzierung)
 Entscheidung: Bäume werden prozedural per **L-System** erzeugt, nicht aus fertigen
