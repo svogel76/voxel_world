@@ -1,4 +1,7 @@
 //! Phase-2 mood lighting ported from `world_generator` reference_scene.
+//!
+//! Marker components let [`crate::day_night`] drive the key sun / fill / fog
+//! without stringly `Name` queries.
 
 use bevy::{
     anti_alias::taa::TemporalAntiAliasing,
@@ -10,7 +13,20 @@ use bevy::{
     prelude::*,
 };
 
+/// Key directional light mutated by the day/night cycle.
+#[derive(Component)]
+pub struct KeySun;
+
+/// Cool fill light scaled with day factor.
+#[derive(Component)]
+pub struct CoolFill;
+
+/// Participating medium for volumetric fog (density toggled from debug console).
+#[derive(Component)]
+pub struct SceneFogVolume;
+
 /// Dark forest clear color + cool, low ambient (reference_scene mood).
+/// Night values are overwritten each frame by [`crate::day_night`].
 pub fn insert_mood_resources(app: &mut App) {
     app.insert_resource(ClearColor(Color::srgb(0.06, 0.07, 0.08)))
         .insert_resource(GlobalAmbientLight {
@@ -27,6 +43,7 @@ pub fn setup_lights(mut commands: Commands) {
     // Participating medium for volumetric god rays around the play / vegetation area.
     commands.spawn((
         Name::new("FogVolume"),
+        SceneFogVolume,
         FogVolume {
             fog_color: Color::srgb(0.92, 0.94, 0.97),
             density_factor: 0.08,
@@ -39,6 +56,7 @@ pub fn setup_lights(mut commands: Commands) {
 
     commands.spawn((
         Name::new("KeySun"),
+        KeySun,
         DirectionalLight {
             illuminance: 80_000.0,
             shadow_maps_enabled: true,
@@ -59,6 +77,7 @@ pub fn setup_lights(mut commands: Commands) {
 
     commands.spawn((
         Name::new("CoolFill"),
+        CoolFill,
         DirectionalLight {
             illuminance: 5_500.0,
             shadow_maps_enabled: false,

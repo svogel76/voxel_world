@@ -190,6 +190,12 @@ Meilenstein: Eine einzelne Test-Szene (z.B. Lichtstrahl durch Blätterdach) die 
 Concept Art schon nahekommt — rein durch Licht, mit Platzhalter-Texturen.
 Erste Version: `cargo run -p world_generator --example reference_scene`.
 
+### Zwischenschritt — Debug Console + Tag/Nacht (in `voxel_game`)
+Ohne lokale GPU-Validierung schwer zu iterieren; daher vor Phase 3:
+- [x] Leichte Debug-Console (F1-Overlay + Keybinds, kein egui) — Fog/SSAO/Day
+- [x] Tag/Nacht-Zyklus — Key-Sun-Orbit, Ambient/Clear/Fog über `DayCycle`
+  (Default 10 min/Tag; Pause friert nicht die Physik ein)
+
 ---
 
 ## Phase 3 — Texturen & Materialien

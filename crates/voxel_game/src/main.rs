@@ -1,5 +1,7 @@
-//! Playable shell: noise voxel terrain + vegetation chunk + Avian capsule + Phase-2 mood.
+//! Playable shell: noise voxel terrain + vegetation + Avian + mood + day/night.
 
+mod day_night;
+mod debug_console;
 mod fps;
 mod height;
 mod lighting;
@@ -11,6 +13,8 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_voxel_world::prelude::*;
 
+use day_night::DayNightPlugin;
+use debug_console::DebugConsolePlugin;
 use fps::FpsPlugin;
 use lighting::{insert_mood_resources, setup_lights};
 use player::{attach_chunk_colliders, player_look, player_move, spawn_player, PlayerCamera};
@@ -28,6 +32,8 @@ fn main() {
         ..default()
     }))
     .add_plugins(FpsPlugin)
+    .add_plugins(DayNightPlugin)
+    .add_plugins(DebugConsolePlugin)
     .add_plugins(VoxelWorldPlugin::with_config(VoxelTerrain))
     .add_plugins(PhysicsPlugins::default())
     .add_systems(
