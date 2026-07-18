@@ -31,15 +31,20 @@ diese Arbeit übernimmt — damit die Abstraktion kein Blackbox-Gefühl hinterl�
 ---
 
 ## Phase 1 — Umstieg auf bevy_voxel_world
-- [ ] bevy_voxel_world in ein neues, separates Projekt einbinden (nicht die Lern-Engine umbauen)
-- [ ] Terrain-Generierung mit eigenem Noise-Backend an bevy_voxel_world anbinden
-  (Perlin-Wissen aus Phase 0 wird hier direkt wiederverwendet)
-- [ ] Chunk-Streaming/LOD-Verhalten des Crates verstehen (Config-Optionen, Render-Distance)
-- [ ] Kollision/Physik-Integration mit **Avian3D** grundlegend testen
+- [x] bevy_voxel_world in ein neues, separates Projekt einbinden (nicht die Lern-Engine umbauen)
+  → Crate [`crates/voxel_game`](../crates/voxel_game) mit `bevy_voxel_world` 0.17 (Bevy 0.19)
+- [x] Terrain-Generierung mit eigenem Noise-Backend an bevy_voxel_world anbinden
+  → `VoxelNoiseHeight` / `SimpleNoiseTerrain` als gemeinsamer Height-Source für Voxel-Fill
+  und `generate_chunk` (nicht `get_voxel` der Engine — unloaded chunks sind `Unset`)
+- [x] Chunk-Streaming/LOD-Verhalten des Crates verstehen (Config-Optionen, Render-Distance)
+  → `VoxelWorldCamera` + `spawning_distance`; LOD-Deep-Dive bewusst später
+- [x] Kollision/Physik-Integration mit **Avian3D** grundlegend testen
   (Entscheidung: Avian statt bevy_rapier — native ECS-Integration, keine separate
   Physik-Welt, besser lesbarer Source Code; passt zu ECS-Denkweise)
-  - [ ] `ColliderConstructor`/`ColliderConstructorHierarchy` zur automatischen
+  - [x] `ColliderConstructor`/`ColliderConstructorHierarchy` zur automatischen
     Collider-Generierung aus den Terrain-Chunk-Meshes einrichten
+    → `ChunkWillSpawn` → `RigidBody::Static` + `ColliderConstructor::TrimeshFromMesh`
+    + begehbare Capsule (WASD)
 
 Meilenstein: Begehbares, generiertes Blockterrain — noch ohne Stil.
 
@@ -64,10 +69,10 @@ wird ein eigenständiges Crate in einem gemeinsamen Cargo Workspace — kein Mon
 - [x] Visuelle Validierung pro Generator über ein eigenes `examples/visualize.rs`
   (Äquivalent zur "Testszene" aus Unity), gestartet mit
   `cargo run -p <crate> --example visualize`
-- [ ] Erst ein dünner Integrations-Layer im späteren Haupt-Spiel-Crate übersetzt die
-  generierten Voxel-Daten in echte Bevy-Entities/Components (noch offen — braucht
-  echtes `bevy_voxel_world`-Terrain aus Phase 1, `TerrainHeightSource` ist aber bereits
-  als austauschbares Trait vorbereitet)
+- [x] Erst ein dünner Integrations-Layer im späteren Haupt-Spiel-Crate übersetzt die
+  generierten Voxel-Daten in echte Bevy-Entities/Components
+  → `voxel_game::vegetation` spawnt eine feste Area aus `generate_chunk` als Cubes /
+  Gras-Cross-Quads auf dem Noise-Terrain
 
 ### Biom-/Zonen-Bestimmung
 - [x] Zweiter Noise-Layer (z.B. Feuchtigkeit) zusätzlich zur Höhenkarte
@@ -131,10 +136,9 @@ Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
   Struktur-/Ruinen-Generator (noch nicht in Arbeit) oder feste Hand-Prefabs.
 
 ### Platzierungslogik (gilt für alle Sub-Generatoren)
-- [ ] Zugriff auf Terrain-Höhe an Position (X,Z) aus **echtem** `bevy_voxel_world`
-  abfragen — `TerrainHeightSource`-Trait existiert und funktioniert bereits mit
-  Test-Implementierungen (`ConstantHeight`, `SimpleNoiseTerrain`), echte Anbindung
-  fehlt noch (braucht Phase 1)
+- [x] Zugriff auf Terrain-Höhe an Position (X,Z) konsistent mit Voxel-Terrain
+  — `VoxelNoiseHeight` im `voxel_game`-Crate teilt denselben Height-Source mit dem
+  Voxel-Lookup (Engine-`get_voxel` bleibt für unloaded Chunks ungeeignet)
 - [x] Poisson-Disc-Sampling für natürlichen Mindestabstand bei Bäumen (Bridson's
   Algorithmus, selbst implementiert in `world_generator`)
 - [x] Regeln an Terrain-Eigenschaften koppeln — für Steine umgesetzt (Hangsteigung
