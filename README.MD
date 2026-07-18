@@ -58,5 +58,6 @@ voxel-world/
 
 ## Status
 
-Phase 1.5 (Generatoren) und Phase 1 (`voxel_game` Terrain + Vegetation-Spawn + Avian)
-sind umgesetzt. Als Nächstes: Licht/Atmosphäre auf echtem Terrain, Texturen später.
+Phase 1.5 (Generatoren), Phase 1 (`voxel_game` Terrain + Vegetation + Avian) und
+Phase-2-Licht auf echtem Terrain (CSM, Volumetrics, Bloom, SSAO, FPS) sind umgesetzt.
+Als Nächstes: Scale-Feeling bestätigen, Unterholz-Regeln, dann Texturen (Phase 3).
