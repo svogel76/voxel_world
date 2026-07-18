@@ -27,15 +27,18 @@ Für Entwicklung/Tests: eine einfache Test-Implementierung (z.B. eigene
 Platzhalter-Noise-Funktion, ähnlich `rock_generator::noise`). Die echte
 Anbindung an `bevy_voxel_world` entsteht später im `voxel_game`-Crate.
 
-## Bekannte offene Frage für spätere Phasen: `BlockType`-Vereinheitlichung
+## Entscheidung: `WorldBlockType` (Phase 4)
 
-`tree_generator` und `rock_generator` haben jeweils ihr **eigenes**
-`BlockType`-Enum (`Wood`/`Leaf` bzw. `Stone`) — das war eine bewusste
-Konsequenz der Crate-Isolation. Sobald `world_generator` die Ausgaben
-mehrerer Sub-Generatoren kombiniert (Phase 4), muss diese Fragmentierung
-gelöst werden (z.B. ein vereinheitlichendes `WorldBlockType`-Enum in
-`world_generator`, das die einzelnen Sub-Typen umwandelt/wrapped). Wird
-nicht vorab gelöst, sondern erst wenn Phase 4 tatsächlich ansteht.
+`tree_generator` und `rock_generator` behalten jeweils ihr **eigenes**
+`BlockType`-Enum (`Wood`/`Leaf` bzw. `Stone`) — bewusste Crate-Isolation.
+`world_generator` führt sie erst bei der Orchestrierung zusammen:
+
+```rust
+pub enum WorldBlockType { Wood, Leaf, Stone }
+// From<tree_generator::BlockType> / From<rock_generator::BlockType>
+```
+
+Kein gemeinsames Enum in den Sub-Crates; Mapping nur im Orchestrator.
 
 ## Abhängigkeiten
 
@@ -57,6 +60,18 @@ nicht vorab gelöst, sondern erst wenn Phase 4 tatsächlich ansteht.
 - Jedes `Biome` bekommt eigene Parameter: welche `TreeParams`/`GrassParams`/
   `RockParams`-Presets, welche Dichten
 - Einfache statische Zuordnung (`match biome { ... }`) reicht zunächst
+
+Forest-`RockParams` (nach Sanity-Check gegen Leer-Boulder):
+
+| Feld | Wert | Begründung |
+|------|------|------------|
+| `half_extent` | **4** | mehr Volumen (9³=729 statt 7³=343) |
+| `threshold` | **0.4** | mehr Noise-Zellen überschreiten die Schwelle |
+| `radial_falloff` | **0.35** | etwas weicherer Rand, weniger Kern-Kollaps |
+| übrige Felder | Defaults (`frequency=0.35`, Achsen `0.7..=1.3`) | |
+
+Defaults (`half_extent=3`, `threshold=0.5`, `falloff=0.45`) erzeugten oft
+0–3 Voxel nach dem Connectivity-Filter — unsichtbare „Steine“.
 
 ### Phase 3 — Platzierungslogik
 - Poisson-Disc-Sampling für Bäume (Mindestabstand, selbst implementiert —
@@ -103,15 +118,39 @@ Phase 4 bei der Orchestrierung.
 ### Phase 4 — Orchestrierung: `generate_chunk()`
 - Kombiniert Biom-Bestimmung + Platzierungslogik + Aufrufe an alle drei
   Sub-Generatoren für einen gegebenen Bereich
-- Löst die `BlockType`-Vereinheitlichung (siehe oben)
-- Ausgabe: eine kombinierte Struktur mit Voxel-Daten (Bäume/Steine) und
-  Platzierungsdaten (Gras), in Weltkoordinaten (unter Nutzung von
-  `TerrainHeightSource` für die Y-Position)
+- `WorldBlockType` + `ChunkContent` (siehe oben)
+- Ausgabe: Voxel (Bäume/Steine) und Gras-Instanzen in Weltkoordinaten
+  (`TerrainHeightSource` setzt Y)
+
+#### Bekannte Einschränkung: genau ein Biom pro Area
+
+`generate_chunk` bestimmt das Biom **nur am Mittelpunkt** der Area
+(`classify`) und wendet die zugehörigen `BiomeParams` auf die gesamte Area
+an. Keine Biom-Übergänge oder -Mischung innerhalb einer Area. Später
+auflösbar durch kleinere Sub-Areas mit jeweils eigenem Biom — nicht Teil
+dieses ersten Durchstichs.
+
+#### Seed-Ableitung pro Baum/Stein
+
+```text
+feature_seed(world_seed, kind, x, z)
+  = mix(world_seed, kind, round(x·1000), round(z·1000))
+```
+
+`kind` trennt Baum- und Stein-Ströme; Milli-Quantisierung hält Float-
+Positionen stabil. Gleicher World-Seed + gleiche Position → gleiche Form.
 
 ### Phase 5 — Visuelle Validierung
-- `examples/visualize.rs`: nutzt eine einfache Test-`TerrainHeightSource`
-  (kein echtes `bevy_voxel_world`), zeigt einen kompletten generierten
-  Bereich mit Bäumen, Gras und Steinen
+- `examples/visualize.rs`: drei **10×10**-Areas nebeneinander (Forest /
+  Rocky / Clearing), kein echtes `bevy_voxel_world`
+- Forest & Clearing: `SimpleNoiseTerrain` (Höhenvariation); Rocky:
+  `ConstantHeight(12)` für zuverlässige Biom-Klassifikation
+- Seeds am lokalen Zentrum `(5,5)`: Forest=`0`, Clearing=`1`, Rocky=beliebig
+  bei hoher Höhe
+- Pro Panel: **Heightfield-Boden** (Gitter-Mesh, Y aus `height_at()`), damit
+  Objekt-Boden-Kontakt prüfbar ist — Kamera startet seitlich auf Forest
+- Optional Screenshot: `WORLD_GENERATOR_SCREENSHOT=path.png cargo run -p
+  world_generator --example visualize`
 - Start: `cargo run -p world_generator --example visualize`
 
 ## Öffentliche API (Zielbild)

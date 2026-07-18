@@ -42,22 +42,24 @@ echten Szene mit Bäumen/Blätterdach getestet werden kann.
 ### Architektur: Cargo Workspace mit isolierten Generator-Crates
 Entscheidung: Jeder Sub-Generator (Baum, Gras, Stein, Weltgenerator als Orchestrator)
 wird ein eigenständiges Crate in einem gemeinsamen Cargo Workspace — kein Monolith.
-- [ ] Workspace-Grundgerüst anlegen (`Cargo.toml` mit `[workspace] members = [...]`)
-- [ ] Jeder Generator ist bewusst **Bevy-frei**: reine Rust-Logik (Seed + Parameter rein,
+- [x] Workspace-Grundgerüst anlegen (`Cargo.toml` mit `[workspace] members = [...]`)
+- [x] Jeder Generator ist bewusst **Bevy-frei**: reine Rust-Logik (Seed + Parameter rein,
   Datenstruktur wie `Vec<VoxelPos>` raus), damit er isoliert mit `cargo test -p <crate>`
   testbar ist, ohne die komplette Bevy-App zu starten
-- [ ] Bevy wird pro Generator-Crate nur als `dev-dependency` eingebunden — sichtbar nur
+- [x] Bevy wird pro Generator-Crate nur als `dev-dependency` eingebunden — sichtbar nur
   für `examples/`, nicht Teil der eigentlichen Library-API
-- [ ] Visuelle Validierung pro Generator über ein eigenes `examples/visualize.rs`
+- [x] Visuelle Validierung pro Generator über ein eigenes `examples/visualize.rs`
   (Äquivalent zur "Testszene" aus Unity), gestartet mit
   `cargo run -p <crate> --example visualize`
 - [ ] Erst ein dünner Integrations-Layer im späteren Haupt-Spiel-Crate übersetzt die
-  generierten Voxel-Daten in echte Bevy-Entities/Components
+  generierten Voxel-Daten in echte Bevy-Entities/Components (noch offen — braucht
+  echtes `bevy_voxel_world`-Terrain aus Phase 1, `TerrainHeightSource` ist aber bereits
+  als austauschbares Trait vorbereitet)
 
 ### Biom-/Zonen-Bestimmung
-- [ ] Zweiter Noise-Layer (z.B. Feuchtigkeit) zusätzlich zur Höhenkarte
-- [ ] Einfache Zonen ableiten (Wald, Fels, Lichtung) aus Höhe + Feuchtigkeit kombiniert
-- [ ] Jedes Biom bekommt eigene Parameter (Baumdichte, Baumarten/L-System-Regelsätze,
+- [x] Zweiter Noise-Layer (z.B. Feuchtigkeit) zusätzlich zur Höhenkarte
+- [x] Einfache Zonen ableiten (Wald, Fels, Lichtung) aus Höhe + Feuchtigkeit kombiniert
+- [x] Jedes Biom bekommt eigene Parameter (Baumdichte, Baumarten/L-System-Regelsätze,
   Grasdichte, Steindichte), die an die jeweiligen Sub-Generatoren weitergereicht werden —
   der Weltgenerator entscheidet *was* und *wie viel*, der Generator entscheidet *wie*
 - **Entscheidung — Terrain-Höhen-Zugriff:** `world_generator` bleibt Bevy-frei und
@@ -70,20 +72,22 @@ wird ein eigenständiges Crate in einem gemeinsamen Cargo Workspace — kein Mon
 ### Baumgenerator (mit Formgenerierung, nicht nur Platzierung)
 Entscheidung: Bäume werden prozedural per **L-System** erzeugt, nicht aus fertigen
 Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
-- [ ] L-System-Grundlagen verstehen: Axiom, Produktionsregeln, Iterationstiefe
+- [x] L-System-Grundlagen verstehen: Axiom, Produktionsregeln, Iterationstiefe
   (isoliert testen, z.B. nur als 2D-Textausgabe/Zeichenkette, bevor irgendwas 3D wird)
-- [ ] Turtle-Graphics-Interpretation: Zeichenkette → Liste von 3D-Liniensegmenten
+- [x] Turtle-Graphics-Interpretation: Zeichenkette → Liste von 3D-Liniensegmenten
   (Vorwärts, Abbiegen, Verzweigen/Stack push-pop für Äste)
-- [ ] Voxelisierung: Liniensegmente → Voxel-Blöcke (Stamm dicker/gerader,
+- [x] Voxelisierung: Liniensegmente → Voxel-Blöcke (Stamm dicker/gerader,
   Äste dünner, Bresenham-artiges Line-Voxelization-Verfahren)
-- [ ] Blätter/Laubkronen hinzufügen (z.B. Voxel-Cluster an Astenden)
-- [ ] Parametrische Variation (zufällige Winkel/Iterationstiefe innerhalb Grenzen,
+- [x] Blätter/Laubkronen hinzufügen (z.B. Voxel-Cluster an Astenden)
+- [x] Parametrische Variation (zufällige Winkel/Iterationstiefe innerhalb Grenzen,
   damit nicht jeder Baum identisch aussieht)
 
 ### Vegetationsgenerator (Farne, Gras)
-- [ ] Einfachere prozedurale Form (kein volles L-System nötig, z.B. Billboard-Quads
+- [x] Einfachere prozedurale Form (kein volles L-System nötig, z.B. Billboard-Quads
   oder simple Voxel-Cluster) — bewusst geringerer Aufwand als Bäume
-- [ ] Dichte-Noise für natürliche Verteilung statt Gleichverteilung
+- [x] Dichte-basierte Verteilung (Zufalls-Sampling proportional zur Fläche, kein
+  echtes Noise-Feld nötig — bewusste Vereinfachung gegenüber Bäumen/Steinen, siehe
+  `grass_generator`-README)
 - **Entscheidung:** Statische Kreuzquads (zwei senkrecht zueinander stehende
   Ebenen, per Zufallsrotation um Y variiert — wie in Minecraft), kein
   kamera-ausgerichtetes Echtzeit-Billboarding, keine Micro-Voxel-Cluster.
@@ -96,8 +100,9 @@ Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
   Bevy-Integrationsschicht.
 
 ### Steingenerator
-- [ ] Einfache Voxel-Cluster-Formen mit Größen-/Rotationsvariation
-- [ ] Verteilungsregel an Terrain-Steigung koppeln (z.B. mehr Steine an Hängen)
+- [x] Einfache Voxel-Cluster-Formen mit Größen-/Rotationsvariation
+- [x] Verteilungsregel an Terrain-Steigung koppeln (mehr Steine an Hängen,
+  via `rock_density_multiplier(slope)` in `world_generator`)
 - **Entscheidung — Technik:** 3D-Noise-Schwellenwert (Perlin/Simplex-Feld über
   eine Box, Voxel wird "Stein" wenn Noise-Wert > Schwelle), statt Ellipsoid
   mit Rand-Jitter oder 3D-Random-Walk. Begründung: Ellipsoid-Jitter behält
@@ -113,16 +118,28 @@ Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
   Struktur-/Ruinen-Generator (noch nicht in Arbeit) oder feste Hand-Prefabs.
 
 ### Platzierungslogik (gilt für alle Sub-Generatoren)
-- [ ] Zugriff auf Terrain-Höhe an Position (X,Z) aus bevy_voxel_world abfragen
-- [ ] Poisson-Disc-Sampling für natürlichen Mindestabstand (statt reinem Zufalls-Noise,
-  das zu Überlappungen führen kann)
-- [ ] Regeln an Terrain-Eigenschaften koppeln (z.B. zu steile Hänge → kein Baum)
+- [ ] Zugriff auf Terrain-Höhe an Position (X,Z) aus **echtem** `bevy_voxel_world`
+  abfragen — `TerrainHeightSource`-Trait existiert und funktioniert bereits mit
+  Test-Implementierungen (`ConstantHeight`, `SimpleNoiseTerrain`), echte Anbindung
+  fehlt noch (braucht Phase 1)
+- [x] Poisson-Disc-Sampling für natürlichen Mindestabstand bei Bäumen (Bridson's
+  Algorithmus, selbst implementiert in `world_generator`)
+- [x] Regeln an Terrain-Eigenschaften koppeln — für Steine umgesetzt (Hangsteigung
+  → Dichte-Multiplikator); für Bäume (zu steile Hänge → kein Baum) noch nicht
+  explizit umgesetzt, nur implizit über Poisson-Disc-Dichte
 
 ### Performance & Kollision
 - [ ] GPU-Instancing/Mesh-Batching prüfen, sobald viele gleichartige Objekte
   (Bäume, Gras) in der Szene stehen — sonst bricht die Framerate früh ein
 - [ ] Vereinfachte Avian3D-Collider pro Objekttyp (z.B. Zylinder für Baumstamm,
   statt teurer Mesh-genauer Kollision)
+
+**Status:** Kernarbeit abgeschlossen (18.07.2026). Alle vier Crates
+(`tree_generator`, `grass_generator`, `rock_generator`, `world_generator`)
+phasenweise entwickelt, getestet und visuell validiert — zuletzt gemeinsam als
+`generate_chunk()` mit drei unterschiedlichen Biomen (Forest/Rocky/Clearing) in
+einer Szene mit terrain-höhengekoppelten Objekten. Offen bleiben: echte
+`bevy_voxel_world`-Anbindung (Teil von Phase 1), Performance/Kollision (später).
 
 Meilenstein: Ein Testchunk mit prozedural generierten, unterschiedlichen Bäumen,
 Farnen, Gras und Steinen — die Grundlage, an der Phase 2 (Licht) sinnvoll getestet

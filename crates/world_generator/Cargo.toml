@@ -10,3 +10,6 @@ grass_generator = { path = "../grass_generator" }
 rock_generator = { path = "../rock_generator" }
 rand = { workspace = true }
 glam = { workspace = true }
+
+[dev-dependencies]
+bevy = { workspace = true, features = ["free_camera"] }

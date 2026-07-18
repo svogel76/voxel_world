@@ -41,8 +41,12 @@ pub fn params_for(biome: Biome) -> BiomeParams {
                 density: 1.2,
                 ..GrassParams::default()
             },
+            // Larger / denser than rock_generator defaults so half_extent=4
+            // rarely collapses to empty after the connectivity filter.
             rock_params: RockParams {
-                half_extent: 3,
+                half_extent: 4,
+                threshold: 0.4,
+                radial_falloff: 0.35,
                 ..RockParams::default()
             },
             rock_density: 0.015,
