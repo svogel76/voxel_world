@@ -181,12 +181,18 @@ Reference Scene validieren.
   - **Player-Proxy** (~0,6×1,8×0,6) am Pfadrand — kein Character-Controller
   - Kamera auf **Augenhöhe (~1,6 m)** im Korridor
   - sparse Far trees / Kronenlücken für Lichtstrahlen
-  - Gras seitlich dicht, Mitte frei; Steine als Seitenanker
+  - **Unterholz (Layer 1+2 in der Demo erprobt):**
+    - Farne dicht an den Seiten + Stammfüßen (`grass_generator`, fern-lastig)
+    - Büsche als kleine Leaf-Voxel-Cluster (nur im Example, noch kein Crate)
+    - ein bemooster Fallstamm am Pfadrand (Wood + Moos-Tint-Würfel)
+  - Steine als Seitenanker
 - **Licht (Phase-2-Spike an dieser Szene):** dunkles `GlobalAmbientLight`,
   DirectionalLight + Cascaded Shadow Maps + `VolumetricLight`/`VolumetricFog`/
   `FogVolume`, dezentes Bloom, SSAO (+ TAA)
 - **Bewusst nicht in der Demo:** spielbare Figur, Wasserlauf, Runenstein/Ruinen,
-  echte `bevy_voxel_world`-Meshes, PBR-Texturen; keine globale Preset-Umstellung
+  echte `bevy_voxel_world`-Meshes, PBR-Texturen; keine globale Preset-Umstellung;
+  kein eigener `bush_generator` / Debris-Crate (erst nach visueller Validierung)
+- Screenshots: `docs/reference_scene_scale.png`, `docs/reference_scene_undergrowth.png`
 - Start: `cargo run -p world_generator --example reference_scene`
 
 Erst wenn die Reference Scene stimmungsmäßig **und** maßstäblich passt, Regeln

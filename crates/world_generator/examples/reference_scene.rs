@@ -1,8 +1,8 @@
 //! Art-directed hero-shot demo for the Blocky Forest mood + world scale.
 //!
 //! Semi-manual: fixed seeds + fixed world positions call the sub-generators
-//! directly (not `generate_chunk`). Includes a 1.8 m player proxy and a ~20–25 m
-//! hero tree so scale is readable (1 voxel ≈ 1 m).
+//! directly (not `generate_chunk`). Includes a 1.8 m player proxy, a ~20–25 m
+//! hero tree, fern/bush undergrowth, and a fallen mossy log (1 voxel ≈ 1 m).
 //!
 //! Run:
 //! ```text
@@ -34,7 +34,9 @@ use bevy::{
     render::view::screenshot::{save_to_disk, Screenshot},
 };
 use glam::{IVec3, Vec2};
-use grass_generator::{Area, GrassInstance, GrassParams, GrassVariant};
+use grass_generator::{Area, GrassInstance, GrassParams, GrassVariant, VariantWeights};
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 use rock_generator::RockParams;
 use tree_generator::{CrossSectionShape, LeafPlacement, TreeParams, TurtleParams};
 use world_generator::{SimpleNoiseTerrain, TerrainHeightSource};
@@ -127,6 +129,34 @@ fn hero_tree_params() -> TreeParams {
     }
 }
 
+/// Bush anchors: (world_x, world_z, seed) — keep |x| ≳ 2.5 so the path stays clear.
+fn bush_placements() -> &'static [(f32, f32, u64)] {
+    &[
+        (-5.0, 5.0, 701),
+        (-4.0, 9.0, 702),
+        (-6.5, 12.0, 703),
+        (-5.5, 17.0, 704),
+        (4.5, 6.0, 711),
+        (5.5, 10.0, 712),
+        (4.0, 14.0, 713),
+        (6.0, 18.0, 714),
+        (-3.5, 7.5, 721),
+        (3.8, 11.5, 722),
+    ]
+}
+
+/// Dense fern-heavy undergrowth params (path center stays empty via area bounds).
+fn fern_carpet_params(density: f32) -> GrassParams {
+    GrassParams {
+        density,
+        variant_weights: VariantWeights {
+            grass: 0.25,
+            fern: 1.0,
+        },
+        ..GrassParams::default()
+    }
+}
+
 fn rock_params() -> RockParams {
     RockParams {
         half_extent: 4,
@@ -204,6 +234,17 @@ fn setup_scene(
     let leaf_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.16, 0.40, 0.12),
         perceptual_roughness: 0.95,
+        ..default()
+    });
+    let bush_material = materials.add(StandardMaterial {
+        // Darker / more saturated than canopy leaf — reads as undergrowth.
+        base_color: Color::srgb(0.10, 0.34, 0.09),
+        perceptual_roughness: 0.96,
+        ..default()
+    });
+    let moss_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.14, 0.38, 0.12),
+        perceptual_roughness: 0.98,
         ..default()
     });
     let stone_material = materials.add(StandardMaterial {
@@ -319,31 +360,50 @@ fn setup_scene(
         );
     }
 
-    // Grass on corridor edges only — center path stays clear for the sightline.
+    // Layer 1 — fern carpet on corridor edges + denser strips at trunk feet.
+    // Path center (|x| < ~2.5) stays clear for the sightline.
+    let fern_params = fern_carpet_params(2.4);
+    let trunk_fern_params = fern_carpet_params(3.2);
     let left_grass = grass_generator::generate(
         501,
         Area {
             min: Vec2::new(-11.0, 2.0),
-            max: Vec2::new(-3.5, 22.0),
+            max: Vec2::new(-3.0, 24.0),
         },
-        &GrassParams {
-            density: 1.4,
-            ..GrassParams::default()
-        },
+        &fern_params,
     );
     let right_grass = grass_generator::generate(
         502,
         Area {
-            min: Vec2::new(3.5, 2.0),
-            max: Vec2::new(11.0, 22.0),
+            min: Vec2::new(3.0, 2.0),
+            max: Vec2::new(11.0, 24.0),
         },
-        &GrassParams {
-            density: 1.4,
-            ..GrassParams::default()
+        &fern_params,
+    );
+    // Narrow belts near the hero / frame trunks.
+    let left_trunk_ferns = grass_generator::generate(
+        511,
+        Area {
+            min: Vec2::new(-8.5, 9.0),
+            max: Vec2::new(-4.5, 14.0),
         },
+        &trunk_fern_params,
+    );
+    let right_trunk_ferns = grass_generator::generate(
+        512,
+        Area {
+            min: Vec2::new(4.5, 8.0),
+            max: Vec2::new(8.5, 13.0),
+        },
+        &trunk_fern_params,
     );
     let mut grass_count = 0usize;
-    for mut instance in left_grass.into_iter().chain(right_grass) {
+    for mut instance in left_grass
+        .into_iter()
+        .chain(right_grass)
+        .chain(left_trunk_ferns)
+        .chain(right_trunk_ferns)
+    {
         instance.position.y = terrain.height_at(instance.position.x, instance.position.z);
         spawn_cross_quad(
             &mut commands,
@@ -355,8 +415,51 @@ fn setup_scene(
         grass_count += 1;
     }
 
+    // Layer 1 — hand-placed bush clusters (leaf voxels, ~1–2 m).
+    let mut bush_voxel_count = 0usize;
+    for &(x, z, seed) in bush_placements() {
+        let origin_y = terrain.height_at(x, z).round() as i32;
+        let origin = IVec3::new(x.round() as i32, origin_y, z.round() as i32);
+        let voxels = bush_cluster_voxels(seed);
+        bush_voxel_count += voxels.len();
+        for pos in voxels {
+            commands.spawn((
+                Mesh3d(cube_mesh.clone()),
+                MeshMaterial3d(bush_material.clone()),
+                Transform::from_translation((pos + origin).as_vec3()),
+            ));
+        }
+    }
+
+    // Layer 2 — fallen mossy log along the right path edge (does not block sightline).
+    let fallen_log = fallen_log_voxels();
+    let log_moss = fallen_log_moss_voxels();
+    for pos in &fallen_log {
+        let y = terrain.height_at(pos.x as f32, pos.z as f32).round() as i32;
+        let world = IVec3::new(pos.x, y + pos.y, pos.z);
+        commands.spawn((
+            Mesh3d(cube_mesh.clone()),
+            MeshMaterial3d(wood_material.clone()),
+            Transform::from_translation(world.as_vec3()),
+        ));
+    }
+    for pos in &log_moss {
+        let y = terrain.height_at(pos.x as f32, pos.z as f32).round() as i32;
+        let world = IVec3::new(pos.x, y + pos.y, pos.z);
+        commands.spawn((
+            Mesh3d(cube_mesh.clone()),
+            MeshMaterial3d(moss_material.clone()),
+            Transform::from_translation(world.as_vec3()),
+        ));
+    }
+
     eprintln!(
-        "reference_scene: frame_tree_voxels={tree_voxel_count} rock_voxels={rock_voxel_count} grass={grass_count}"
+        "reference_scene undergrowth: ferns/grass={grass_count} bush_voxels={bush_voxel_count} log_wood={} log_moss={}",
+        fallen_log.len(),
+        log_moss.len()
+    );
+    eprintln!(
+        "reference_scene: frame_tree_voxels={tree_voxel_count} rock_voxels={rock_voxel_count}"
     );
 
     // Sparse overhead canopy with a center gap — casts shafts into the fog.
@@ -470,6 +573,72 @@ fn setup_scene(
             ..default()
         },
     ));
+}
+
+/// Irregular leaf cluster (~1–2 m) relative to bush origin on the ground.
+fn bush_cluster_voxels(seed: u64) -> Vec<IVec3> {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let mut voxels = Vec::new();
+    let height = rng.gen_range(1..=2);
+    let radius = rng.gen_range(1..=2);
+    for y in 0..=height {
+        let layer_r = radius - (y / 2);
+        let r = layer_r.max(1);
+        for dx in -r..=r {
+            for dz in -r..=r {
+                if dx * dx + dz * dz > r * r {
+                    continue;
+                }
+                // Sparse holes so bushes don't look like solid cubes.
+                if rng.gen_bool(0.72) {
+                    voxels.push(IVec3::new(dx, y, dz));
+                }
+            }
+        }
+    }
+    voxels
+}
+
+/// Fallen log along the right path edge: thick wood line from near-camera toward mid.
+/// Positions use world XZ; Y is height above local terrain (0 = resting on ground).
+fn fallen_log_voxels() -> Vec<IVec3> {
+    // From (3, 6) toward (-1, 11) — ~8 m, sits beside the path without blocking the hole.
+    let start = IVec3::new(3, 0, 6);
+    let end = IVec3::new(-1, 0, 11);
+    let mut voxels = Vec::new();
+    let steps = 10;
+    for i in 0..=steps {
+        let t = i as f32 / steps as f32;
+        let cx = start.x as f32 + (end.x - start.x) as f32 * t;
+        let cz = start.z as f32 + (end.z - start.z) as f32 * t;
+        let center = IVec3::new(cx.round() as i32, 0, cz.round() as i32);
+        // 2×2 cross-section (lying trunk).
+        for dy in 0..2 {
+            for d in -1i32..=0 {
+                voxels.push(center + IVec3::new(d, dy, 0));
+                voxels.push(center + IVec3::new(0, dy, d));
+            }
+            voxels.push(center + IVec3::new(0, dy, 0));
+        }
+    }
+    voxels.sort_by_key(|p| (p.x, p.y, p.z));
+    voxels.dedup();
+    voxels
+}
+
+/// Moss patches on the upper face of the fallen log (placeholder tint, no textures).
+fn fallen_log_moss_voxels() -> Vec<IVec3> {
+    let log = fallen_log_voxels();
+    let mut moss = Vec::new();
+    let mut rng = StdRng::seed_from_u64(8801);
+    for p in log {
+        if p.y >= 1 && rng.gen_bool(0.55) {
+            moss.push(IVec3::new(p.x, p.y + 1, p.z));
+        }
+    }
+    moss.sort_by_key(|p| (p.x, p.y, p.z));
+    moss.dedup();
+    moss
 }
 
 /// Hand-placed leaf cubes forming a broken canopy over the path (gaps = shafts).
@@ -686,9 +855,9 @@ fn spawn_help_text(mut commands: Commands) {
             ..default()
         },
         children![Text::new(concat!(
-            "Reference Scene — scale spike: 1 block≈1m | player proxy 1.8m | hero tree ~20–25m\n",
-            "Compare with docs/Blocky_forest.png | FreeCamera: WASD Q/E Shift Scroll\n",
-            "Light: CSM shadows + VolumetricFog/Light + Bloom + SSAO | eye height ~1.6m"
+            "Reference Scene — undergrowth: ferns + bushes + fallen mossy log\n",
+            "Scale: 1 block≈1m | proxy 1.8m | hero ~20–25m | eye ~1.6m | FreeCamera WASD\n",
+            "Light: CSM + VolumetricFog/Light + Bloom + SSAO"
         ))],
     ));
 }

@@ -213,14 +213,19 @@ hier geht es um Komposition/Layering, nicht mehr um Erzeugung der Objekte selbst
 
 **Vorarbeit aus der Reference Scene** (noch nicht automatisiert): dichter
 Stamm-Rahmen links/rechts, offene Mitte, sparse Far canopy für Lichtlöcher,
-Gras dicht vorn / dünn auf dem Pfad. Diese Regeln erst übernehmen, wenn die
-Demo stimmungsmäßig steht — siehe `world_generator` README → „Reference Scene“.
+Maßstab (Proxy 1,8 m / Hero ~20–25 m), **Unterholz** (dichte Farne, Bush-Cluster,
+bemooster Fallstamm). Regeln erst in Generatoren übernehmen, wenn die Demo
+stimmungsmäßig steht — siehe `world_generator` README → „Reference Scene“.
 
-- [ ] Bush-/Blattwerk-Cluster als überlappende Objekt-Layer (nicht als einzelne Voxel)
+- [x] Bush-/Blattwerk-Cluster als Layer — manuell in `reference_scene` erprobt
+  (Leaf-Voxel-Büsche); eigenes Crate / Instancing noch offen
 - [ ] Wind-Bewegung auf Blattwerk (Vertex-Shader-Animation, leicht)
 - [ ] Hängende Ranken/Lianen als eigene Objektklasse
-- [ ] Dichteverteilung: dicht am Bildrand/Vordergrund, offener in der Bildmitte (Sichtachsen lenken)
-  — manuell in `reference_scene` erprobt; prozedural noch offen
+- [x] Dichteverteilung: dicht am Bildrand/Vordergrund, offener in der Bildmitte
+  — manuell in `reference_scene` erprobt (Farne/Büsche seitlich, Pfad frei);
+  prozedural noch offen
+- [x] Totholz / Fallstamm — ein bemooster Log in `reference_scene` (Platzhalter-Moos);
+  Debris-Generator später
 
 Meilenstein: Komposition lenkt den Blick wie im Concept Art (dunkler Vordergrund,
 heller Fluchtpunkt).
