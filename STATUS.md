@@ -4,7 +4,7 @@ Kurzüberblick für Menschen und Agents: **wo stehen wir, was kommt als Nächste
 Detail-Checklisten und Entscheidungen bleiben in
 [`docs/Roadmap_Voxel_Atmosphere.md`](./docs/Roadmap_Voxel_Atmosphere.md).
 
-**Zuletzt aktualisiert:** 18.07.2026
+**Zuletzt aktualisiert:** 18.07.2026 (Scale-Presets in `generate_chunk`)
 
 ---
 
@@ -16,6 +16,7 @@ Detail-Checklisten und Entscheidungen bleiben in
 | Phase 1 (`voxel_game` + Terrain + Avian) | erledigt |
 | Phase 1.5 (Generator-Crates + `generate_chunk`) | Kernarbeit erledigt |
 | Phase 2 (Licht-Fundament) | weitgehend erledigt; Contact Shadows bewusst offen |
+| Scale-Feeling (Forest-Presets) | Presets umgesetzt — lokal unter Kronendach gegenprüfen |
 | Phase 3–6 | noch nicht begonnen |
 
 ### Was läuft schon
@@ -31,6 +32,8 @@ Detail-Checklisten und Entscheidungen bleiben in
 - **Debug:** FPS-Overlay in `voxel_game`
 - **Reference Scene:** art-directed Hero Shot inkl. Scale-/Unterholz-Spike
   (`cargo run -p world_generator --example reference_scene`)
+- **Forest-Scale:** `params_for(Forest)` nutzt Frame-Turtle aus der Reference
+  Scene (`step_length: 2.0`, `base_thickness: 4.0`, `tree_density: 0.02`)
 
 ### Maßstab (Weltziel)
 
@@ -40,17 +43,13 @@ Detail-Checklisten und Entscheidungen bleiben in
 | Spieler | ≈ 1,8 m (Augenhöhe ~1,6 m) |
 | Wald-Bäume | 15–30 m (Hero ~20–25 m in der Reference Scene) |
 
-Forest-`TreeParams` in `generate_chunk` sind **noch nicht** global auf diesen
-Maßstab umgestellt — erst Scale-Feeling bestätigen.
-
 ---
 
 ## Nächste Schritte (Reihenfolge)
 
-1. **Lokal validieren** — `cargo run -p voxel_game` (Stimmung, FPS, Licht auf echtem Terrain)
-2. **Scale-Feeling bestätigen** — Spieler klein unter Kronendach; Presets erst nach OK anpassen
-3. **Unterholz-Regeln** — Farne / Büsche / Fallstamm aus der Reference Scene in Generator-Logik
-4. **Phase 3 — Texturen & Materialien** — Atlas/PBR, nicht vorher vorziehen
+1. **Lokal gegenprüfen** — `cargo run -p voxel_game`: Spieler klein unter Kronendach?
+2. **Unterholz-Regeln** — Farne / Büsche / Fallstamm aus der Reference Scene in Generator-Logik
+3. **Phase 3 — Texturen & Materialien** — Atlas/PBR, nicht vorher vorziehen
 
 Ein Schritt, eine sichtbare Veränderung. Keine Phasen überspringen
 (siehe Root-[`AGENTS.MD`](./AGENTS.MD)).

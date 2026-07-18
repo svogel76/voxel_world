@@ -99,11 +99,14 @@ läge nur um einen kleinen Faktor daneben).
 
 Beispiele aus Phase-2-Richtwerten:
 
-| Biom     | `tree_density` | `r ≈` |
-|----------|----------------|-------|
-| Forest   | 0.08           | 3.54  |
-| Clearing | 0.012          | 9.13  |
-| Rocky    | 0.005          | 14.14 |
+| Biom     | `tree_density` | `r ≈` | Hinweis |
+|----------|----------------|-------|---------|
+| Forest   | 0.02           | 7.07  | World-Scale-Bäume (`step=2.0`, Stamm `4.0`) |
+| Clearing | 0.012          | 9.13  | kleinere 2D-Bäume |
+| Rocky    | 0.005          | 14.14 | sparse scrub |
+
+Früher Forest `0.08` (`r≈3.5`) war für Lab-Bäume (`generic_3d`, ~8–10 m)
+gedacht — zu eng für 15–30 m Kronen.
 
 `Area` kommt aus `grass_generator` (wiederverwendet, keine zweite Bounds-
 Struct) — Konvention `Vec2 = (world_x, world_z)`.
@@ -169,8 +172,9 @@ bewusst komponierte Demo gegen `docs/Blocky_forest.png`.
 
 Stil bleibt blockig (wie Concept Art); die **Proportion** darf realistischer
 sein als im PNG (dort eher kompakte Illustrations-Bäume). Forest-`TreeParams`
-in `generate_chunk` noch **nicht** global umgestellt — erst Scale-Spike in der
-Reference Scene validieren.
+in `generate_chunk` nutzen seit dem Scale-Meilenstein die Frame-Werte aus dieser
+Demo (`step_length: 2.0`, `base_thickness: 4.0`); der Hero-Spike (`2.5` / `5.0`)
+bleibt nur hier in der Reference Scene.
 
 - **Semi-manuell:** feste Seeds + feste `(x, z)`-Positionen rufen
   `tree_generator::generate` / `rock_generator::generate` /
