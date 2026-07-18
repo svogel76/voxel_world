@@ -45,6 +45,7 @@ cargo run -p voxel_game
 voxel-world/
 ├── Cargo.toml              Workspace-Definition, gemeinsame Dependency-Versionen
 ├── README.md                diese Datei
+├── STATUS.md                aktueller Stand + nächste Schritte
 ├── Agents.md                 Arbeitsregeln für KI-Assistenten in diesem Projekt
 ├── docs/
 │   └── Roadmap_Voxel_Atmosphere.md
