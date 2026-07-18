@@ -2,7 +2,7 @@
 
 use grass_generator::GrassParams;
 use rock_generator::RockParams;
-use tree_generator::TreeParams;
+use tree_generator::{CrossSectionShape, LeafPlacement, TreeParams, TurtleParams};
 
 use crate::noise::value_noise_2d;
 use crate::terrain::TerrainHeightSource;
@@ -30,13 +30,36 @@ pub struct BiomeParams {
     pub rock_density: f32,
 }
 
+/// Forest tree preset at world scale (1 voxel ≈ 1 m).
+///
+/// Calibrated against `examples/reference_scene.rs` frame trees: depth-3
+/// `generic_3d` grammar with longer steps and thicker trunks so crowns land
+/// roughly in the 15–30 m band (hero spike uses `step_length: 2.5`).
+fn forest_tree_params() -> TreeParams {
+    TreeParams {
+        depth: 3,
+        turtle: TurtleParams {
+            step_length: 2.0,
+            angle_degrees: 18.0,
+            base_thickness: 4.0,
+            taper_ratio: 0.8,
+        },
+        cross_section: CrossSectionShape::Cube,
+        leaf_placement: LeafPlacement { crown_levels: 1 },
+        ..TreeParams::generic_3d()
+    }
+}
+
 /// Static biome → parameter mapping. No randomness in this phase.
 pub fn params_for(biome: Biome) -> BiomeParams {
     match biome {
         Biome::Forest => BiomeParams {
-            // 3D branching → fuller canopy for a dense forest look.
-            tree_params: TreeParams::generic_3d(),
-            tree_density: 0.08,
+            // World-scale 3D canopy (see `forest_tree_params`); not the small
+            // `generic_3d()` lab preset.
+            tree_params: forest_tree_params(),
+            // Was 0.08 (r≈3.5 m) — too tight for ~4 m trunks / 15–30 m crowns.
+            // 0.02 → r≈7.1 m between centers.
+            tree_density: 0.02,
             grass_params: GrassParams {
                 density: 1.2,
                 ..GrassParams::default()
@@ -182,14 +205,46 @@ mod tests {
     }
 
     #[test]
-    fn forest_uses_fuller_3d_tree_preset() {
+    fn forest_uses_scaled_3d_tree_preset() {
         let forest = params_for(Biome::Forest);
-        let reference = TreeParams::generic_3d();
-        assert_eq!(forest.tree_params.depth, reference.depth);
-        assert_eq!(
-            forest.tree_params.turtle.angle_degrees,
-            reference.turtle.angle_degrees
+        let lab = TreeParams::generic_3d();
+        // Same 3D grammar depth as the lab preset; turtle tuned for world scale.
+        assert_eq!(forest.tree_params.depth, lab.depth);
+        assert!(
+            forest.tree_params.turtle.step_length > lab.turtle.step_length,
+            "forest step_length should exceed the small lab preset"
         );
+        assert!(
+            forest.tree_params.turtle.base_thickness > lab.turtle.base_thickness,
+            "forest trunks should be thicker than the lab preset"
+        );
+        assert!((forest.tree_params.turtle.step_length - 2.0).abs() < f32::EPSILON);
+        assert!((forest.tree_params.turtle.base_thickness - 4.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn forest_tree_reaches_world_scale_height() {
+        let params = params_for(Biome::Forest).tree_params;
+        let voxels = tree_generator::generate(42, &params);
+        let wood_ys: Vec<i32> = voxels
+            .iter()
+            .filter(|(_, block)| *block == tree_generator::BlockType::Wood)
+            .map(|(pos, _)| pos.y)
+            .collect();
+        assert!(!wood_ys.is_empty(), "expected wood voxels");
+        let wood_h = wood_ys.iter().copied().max().unwrap() - wood_ys.iter().copied().min().unwrap();
+        assert!(
+            (12..=32).contains(&wood_h),
+            "forest wood span should be ~15–30 m (got {wood_h} m for seed 42)"
+        );
+    }
+
+    #[test]
+    fn forest_poisson_spacing_fits_large_trunks() {
+        let forest = params_for(Biome::Forest);
+        let r = crate::min_distance_from_density(forest.tree_density).unwrap();
+        // Trunk base ≈ 4 m; centers need more than that so trunks do not merge.
+        assert!(r > forest.tree_params.turtle.base_thickness);
     }
 
     #[test]

@@ -61,6 +61,5 @@ voxel-world/
 
 Aktueller Stand und nächste Schritte: **[`STATUS.md`](./STATUS.md)**.
 
-Kurz: Phase 1 / 1.5 und Phase-2-Licht (CSM, Volumetrics, Bloom, SSAO, FPS) sind
-umgesetzt. Als Nächstes: Scale-Feeling bestätigen, Unterholz-Regeln, dann
-Texturen (Phase 3).
+Kurz: Phase 1 / 1.5, Phase-2-Licht und Forest-Scale-Presets sind umgesetzt.
+Als Nächstes: lokal Scale gegenprüfen, Unterholz-Regeln, dann Texturen (Phase 3).

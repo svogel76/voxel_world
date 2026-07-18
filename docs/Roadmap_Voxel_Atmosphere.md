@@ -16,7 +16,9 @@ sondern durch Licht, Texturen und Postprocessing. Die Blockgröße bleibt klassi
 Der Spieler soll sich **klein** unter dem Kronendach fühlen. Style bleibt blockig;
 Proportionen dürfen vom Concept-Art-PNG abweichen (dort oft kompaktere Bäume).
 Validierung zuerst in `world_generator` → `examples/reference_scene.rs` (Player-Proxy
-+ Hero-Baum), bevor Forest-Presets in `generate_chunk` global angepasst werden.
++ Hero-Baum). Forest-Presets in `generate_chunk` nutzen die Frame-Scale aus der
+Reference Scene (`biome::params_for(Forest)`); lokal unter dem Kronendach in
+`voxel_game` gegenprüfen.
 
 ---
 
