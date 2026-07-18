@@ -7,16 +7,24 @@ use rand::{Rng, SeedableRng};
 use rock_generator::generate as generate_rock;
 use tree_generator::generate as generate_tree;
 
-use crate::biome::{classify, params_for, BiomeParams};
+use crate::biome::{classify, params_for, Biome, BiomeParams};
 use crate::placement::{
     poisson_disc_sample, rock_density_multiplier, slope_at, MAX_ROCK_DENSITY_MULTIPLIER,
 };
 use crate::terrain::TerrainHeightSource;
+use crate::understory::{
+    bush_cluster_voxels, fallen_log_voxels, fern_carpet_params, trunk_fern_area, BUSHES_PER_TREE,
+    FALLEN_LOG_CHANCE, TRUNK_FERN_DENSITY,
+};
 
-/// Discriminator mixed into [`feature_seed`] so trees and rocks never share a stream.
+/// Discriminator mixed into [`feature_seed`] so features never share a stream.
 const TREE_FEATURE_KIND: u64 = 0x72EE_0001;
 const ROCK_FEATURE_KIND: u64 = 0xA0C4_0002;
 const ROCK_PLACEMENT_KIND: u64 = 0xA0C4_91A5;
+const TRUNK_FERN_KIND: u64 = 0xFE4E_0003;
+const BUSH_FEATURE_KIND: u64 = 0xB051_0004;
+const LOG_FEATURE_KIND: u64 = 0x1060_0005;
+const LOG_CHANCE_KIND: u64 = 0x1060_C1A1;
 
 /// Unified block type for combined chunk voxel output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -53,6 +61,7 @@ pub struct ChunkContent {
 /// Generate all world content for `area`.
 ///
 /// **One biome per area:** classified at the area center only. No blending.
+/// Forest areas also get understory layers (trunk ferns, leaf bushes, logs).
 pub fn generate_chunk(
     seed: u64,
     area: Area,
@@ -64,13 +73,21 @@ pub fn generate_chunk(
 
     let mut tree_and_rock_voxels = Vec::new();
 
-    place_trees(seed, &area, &params, terrain, &mut tree_and_rock_voxels);
+    let tree_positions = place_trees(seed, &area, &params, terrain, &mut tree_and_rock_voxels);
     place_rocks(seed, &area, &params, terrain, &mut tree_and_rock_voxels);
 
     let mut grass_instances = generate_grass(seed, area, &params.grass_params);
-    for instance in &mut grass_instances {
-        let p = instance.position;
-        instance.position.y = terrain.height_at(p.x, p.z);
+    stamp_grass_heights(&mut grass_instances, terrain);
+
+    if biome == Biome::Forest {
+        place_forest_understory(
+            seed,
+            &area,
+            &tree_positions,
+            terrain,
+            &mut tree_and_rock_voxels,
+            &mut grass_instances,
+        );
     }
 
     ChunkContent {
@@ -109,13 +126,81 @@ fn place_trees(
     params: &BiomeParams,
     terrain: &impl TerrainHeightSource,
     out: &mut Vec<(IVec3, WorldBlockType)>,
-) {
+) -> Vec<Vec2> {
     let positions = poisson_disc_sample(seed, area, params.tree_density);
-    for pos in positions {
+    for pos in &positions {
         let tree_seed = feature_seed(seed, TREE_FEATURE_KIND, pos.x, pos.y);
         let origin = world_origin(pos.x, pos.y, terrain);
         let voxels = generate_tree(tree_seed, &params.tree_params);
         append_translated(voxels, origin, out);
+    }
+    positions
+}
+
+/// Trunk-foot ferns, leaf bushes, and occasional fallen logs near forest trees.
+fn place_forest_understory(
+    seed: u64,
+    area: &Area,
+    tree_positions: &[Vec2],
+    terrain: &impl TerrainHeightSource,
+    voxels: &mut Vec<(IVec3, WorldBlockType)>,
+    grass: &mut Vec<GrassInstance>,
+) {
+    let trunk_params = fern_carpet_params(TRUNK_FERN_DENSITY);
+
+    for tree in tree_positions {
+        if let Some(patch) = trunk_fern_area(*tree, area) {
+            let fern_seed = feature_seed(seed, TRUNK_FERN_KIND, tree.x, tree.y);
+            let mut patch_grass = generate_grass(fern_seed, patch, &trunk_params);
+            stamp_grass_heights(&mut patch_grass, terrain);
+            grass.extend(patch_grass);
+        }
+
+        for i in 0..BUSHES_PER_TREE {
+            let bush_seed = feature_seed(seed, BUSH_FEATURE_KIND.wrapping_add(i as u64), tree.x, tree.y);
+            let offset = bush_offset(bush_seed);
+            let bx = tree.x + offset.x;
+            let bz = tree.y + offset.y;
+            if !point_in_area(bx, bz, area) {
+                continue;
+            }
+            let origin = world_origin(bx, bz, terrain);
+            for local in bush_cluster_voxels(bush_seed) {
+                voxels.push((origin + local, WorldBlockType::Leaf));
+            }
+        }
+
+        let chance_seed = feature_seed(seed, LOG_CHANCE_KIND, tree.x, tree.y);
+        let mut chance_rng = StdRng::seed_from_u64(chance_seed);
+        if chance_rng.gen_range(0.0..1.0) >= FALLEN_LOG_CHANCE {
+            continue;
+        }
+        let log_seed = feature_seed(seed, LOG_FEATURE_KIND, tree.x, tree.y);
+        let origin = world_origin(tree.x, tree.y, terrain);
+        for local in fallen_log_voxels(log_seed) {
+            let world = origin + local;
+            if point_in_area(world.x as f32, world.z as f32, area) {
+                voxels.push((world, WorldBlockType::Wood));
+            }
+        }
+    }
+}
+
+fn bush_offset(seed: u64) -> Vec2 {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+    let dist = rng.gen_range(2.5..4.5);
+    Vec2::new(angle.cos() * dist, angle.sin() * dist)
+}
+
+fn point_in_area(x: f32, z: f32, area: &Area) -> bool {
+    x >= area.min.x && x < area.max.x && z >= area.min.y && z < area.max.y
+}
+
+fn stamp_grass_heights(grass: &mut [GrassInstance], terrain: &impl TerrainHeightSource) {
+    for instance in grass {
+        let p = instance.position;
+        instance.position.y = terrain.height_at(p.x, p.z);
     }
 }
 
@@ -340,6 +425,58 @@ mod tests {
                 instance.position.y
             );
         }
+    }
+
+    #[test]
+    fn forest_understory_adds_ferns_bushes_and_logs() {
+        use grass_generator::GrassVariant;
+
+        let terrain = ConstantHeight(5.0);
+        let chunk_area = area(0.0, 0.0, 40.0, 40.0);
+        let seed = seed_with_forest_center(&chunk_area, &terrain);
+        let content = generate_chunk(seed, chunk_area, &terrain);
+
+        let ferns = content
+            .grass_instances
+            .iter()
+            .filter(|g| g.variant == GrassVariant::Fern)
+            .count();
+        let grass = content
+            .grass_instances
+            .iter()
+            .filter(|g| g.variant == GrassVariant::Grass)
+            .count();
+        assert!(ferns > grass, "forest floor should be fern-heavy (ferns={ferns} grass={grass})");
+
+        let leaf = content
+            .tree_and_rock_voxels
+            .iter()
+            .filter(|(_, b)| *b == WorldBlockType::Leaf)
+            .count();
+        // Tree crowns already contribute Leaf; bushes add more near the ground.
+        // Require a non-trivial leaf presence as a smoke signal for bushes+canopy.
+        assert!(leaf > 50, "expected leaf voxels from crowns/bushes, got {leaf}");
+
+        // With several trees and ~22% log chance, a 40×40 forest should usually
+        // gain extra wood beyond trunks; at minimum wood must exist.
+        assert!(count_wood(&content) > 0);
+    }
+
+    #[test]
+    fn rocky_chunk_skips_forest_understory_layers() {
+        let rocky_terrain = ConstantHeight(ROCKY_MIN_HEIGHT + 5.0);
+        let chunk_area = area(0.0, 0.0, 24.0, 24.0);
+        let content = generate_chunk(1, chunk_area, &rocky_terrain);
+        assert_eq!(
+            classify(12.0, 12.0, 1, &rocky_terrain),
+            Biome::Rocky
+        );
+        // Rocky has almost no trees → no trunk fern belts / bushes / logs.
+        // Grass stays sparse relative to a forest chunk of the same size.
+        let forest_terrain = ConstantHeight(5.0);
+        let forest_seed = seed_with_forest_center(&chunk_area, &forest_terrain);
+        let forest = generate_chunk(forest_seed, chunk_area, &forest_terrain);
+        assert!(forest.grass_instances.len() > content.grass_instances.len());
     }
 
     fn seed_with_forest_center(area: &Area, terrain: &ConstantHeight) -> u64 {

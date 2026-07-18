@@ -1,11 +1,12 @@
 //! Biome classification and parameter mapping (Phases 1–2).
 
-use grass_generator::GrassParams;
+use grass_generator::{GrassParams, VariantWeights};
 use rock_generator::RockParams;
 use tree_generator::{CrossSectionShape, LeafPlacement, TreeParams, TurtleParams};
 
 use crate::noise::value_noise_2d;
 use crate::terrain::TerrainHeightSource;
+use crate::understory::{fern_carpet_params, FOREST_FLOOR_DENSITY};
 
 /// World zone derived from height and moisture.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -60,10 +61,9 @@ pub fn params_for(biome: Biome) -> BiomeParams {
             // Was 0.08 (r≈3.5 m) — too tight for ~4 m trunks / 15–30 m crowns.
             // 0.02 → r≈7.1 m between centers.
             tree_density: 0.02,
-            grass_params: GrassParams {
-                density: 1.2,
-                ..GrassParams::default()
-            },
+            // Fern-heavy floor (reference_scene undergrowth); Clearing stays
+            // the densest *meadow* (higher density, grass-forward weights).
+            grass_params: fern_carpet_params(FOREST_FLOOR_DENSITY),
             // Larger / denser than rock_generator defaults so half_extent=4
             // rarely collapses to empty after the connectivity filter.
             rock_params: RockParams {
@@ -83,6 +83,10 @@ pub fn params_for(biome: Biome) -> BiomeParams {
             tree_density: 0.005,
             grass_params: GrassParams {
                 density: 0.35,
+                variant_weights: VariantWeights {
+                    grass: 1.0,
+                    fern: 0.25,
+                },
                 ..GrassParams::default()
             },
             rock_params: RockParams {
@@ -100,6 +104,10 @@ pub fn params_for(biome: Biome) -> BiomeParams {
             tree_density: 0.012,
             grass_params: GrassParams {
                 density: 2.5,
+                variant_weights: VariantWeights {
+                    grass: 1.0,
+                    fern: 0.35,
+                },
                 ..GrassParams::default()
             },
             rock_params: RockParams {
@@ -202,6 +210,14 @@ mod tests {
         assert!(clearing.grass_params.density > forest.grass_params.density);
         assert!(clearing.grass_params.density > rocky.grass_params.density);
         assert!(forest.grass_params.density > rocky.grass_params.density);
+    }
+
+    #[test]
+    fn forest_grass_is_fern_biased() {
+        let forest = params_for(Biome::Forest);
+        let clearing = params_for(Biome::Clearing);
+        assert!(forest.grass_params.variant_weights.fern > forest.grass_params.variant_weights.grass);
+        assert!(clearing.grass_params.variant_weights.grass > clearing.grass_params.variant_weights.fern);
     }
 
     #[test]

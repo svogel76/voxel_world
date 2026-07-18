@@ -34,12 +34,14 @@ use bevy::{
     render::view::screenshot::{save_to_disk, Screenshot},
 };
 use glam::{IVec3, Vec2};
-use grass_generator::{Area, GrassInstance, GrassParams, GrassVariant, VariantWeights};
+use grass_generator::{Area, GrassInstance, GrassVariant};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use rock_generator::RockParams;
 use tree_generator::{CrossSectionShape, LeafPlacement, TreeParams, TurtleParams};
-use world_generator::{SimpleNoiseTerrain, TerrainHeightSource};
+use world_generator::{
+    bush_cluster_voxels, fern_carpet_params, SimpleNoiseTerrain, TerrainHeightSource,
+};
 
 const CLUMP_WIDTH: f32 = 0.7;
 const CLUMP_HEIGHT: f32 = 1.1;
@@ -143,18 +145,6 @@ fn bush_placements() -> &'static [(f32, f32, u64)] {
         (-3.5, 7.5, 721),
         (3.8, 11.5, 722),
     ]
-}
-
-/// Dense fern-heavy undergrowth params (path center stays empty via area bounds).
-fn fern_carpet_params(density: f32) -> GrassParams {
-    GrassParams {
-        density,
-        variant_weights: VariantWeights {
-            grass: 0.25,
-            fern: 1.0,
-        },
-        ..GrassParams::default()
-    }
 }
 
 fn rock_params() -> RockParams {
@@ -575,31 +565,8 @@ fn setup_scene(
     ));
 }
 
-/// Irregular leaf cluster (~1–2 m) relative to bush origin on the ground.
-fn bush_cluster_voxels(seed: u64) -> Vec<IVec3> {
-    let mut rng = StdRng::seed_from_u64(seed);
-    let mut voxels = Vec::new();
-    let height = rng.gen_range(1..=2);
-    let radius = rng.gen_range(1..=2);
-    for y in 0..=height {
-        let layer_r = radius - (y / 2);
-        let r = layer_r.max(1);
-        for dx in -r..=r {
-            for dz in -r..=r {
-                if dx * dx + dz * dz > r * r {
-                    continue;
-                }
-                // Sparse holes so bushes don't look like solid cubes.
-                if rng.gen_bool(0.72) {
-                    voxels.push(IVec3::new(dx, y, dz));
-                }
-            }
-        }
-    }
-    voxels
-}
-
-/// Fallen log along the right path edge: thick wood line from near-camera toward mid.
+/// Art-directed fallen log along the right path edge (hero-shot composition).
+/// Procedural logs for `generate_chunk` live in `world_generator::fallen_log_voxels`.
 /// Positions use world XZ; Y is height above local terrain (0 = resting on ground).
 fn fallen_log_voxels() -> Vec<IVec3> {
     // From (3, 6) toward (-1, 11) — ~8 m, sits beside the path without blocking the hole.
