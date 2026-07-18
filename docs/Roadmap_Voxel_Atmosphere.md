@@ -217,21 +217,21 @@ Meilenstein: Screenshots aus der Engine sind stimmungsmäßig mit dem Concept Ar
 Baut auf den Objekten aus Phase 1.5 auf (Bäume, Farne, Gras, Steine existieren bereits) —
 hier geht es um Komposition/Layering, nicht mehr um Erzeugung der Objekte selbst.
 
-**Vorarbeit aus der Reference Scene** (noch nicht automatisiert): dichter
-Stamm-Rahmen links/rechts, offene Mitte, sparse Far canopy für Lichtlöcher,
-Maßstab (Proxy 1,8 m / Hero ~20–25 m), **Unterholz** (dichte Farne, Bush-Cluster,
-bemooster Fallstamm). Regeln erst in Generatoren übernehmen, wenn die Demo
-stimmungsmäßig steht — siehe `world_generator` README → „Reference Scene“.
+**Vorarbeit aus der Reference Scene** (teilweise prozedural): dichter
+Stamm-Rahmen / offene Mitte / sparse Far canopy bleiben art-directed.
+Maßstab und **Unterholz** (Farne, Büsche, Fallstämme) stecken in
+`world_generator::understory` und laufen für Forest-Chunks in `generate_chunk`.
 
 - [x] Bush-/Blattwerk-Cluster als Layer — manuell in `reference_scene` erprobt
-  (Leaf-Voxel-Büsche); eigenes Crate / Instancing noch offen
+  und prozedural als Leaf-Büsche in `understory` / Forest-`generate_chunk`;
+  eigenes Crate / Instancing noch offen
 - [ ] Wind-Bewegung auf Blattwerk (Vertex-Shader-Animation, leicht)
 - [ ] Hängende Ranken/Lianen als eigene Objektklasse
 - [x] Dichteverteilung: dicht am Bildrand/Vordergrund, offener in der Bildmitte
-  — manuell in `reference_scene` erprobt (Farne/Büsche seitlich, Pfad frei);
-  prozedural noch offen
-- [x] Totholz / Fallstamm — ein bemooster Log in `reference_scene` (Platzhalter-Moos);
-  Debris-Generator später
+  — manuell in `reference_scene`; Forest-Boden fern-lastig + Stammfuß-Farne
+  prozedural; art-directed Pfadachse noch nicht automatisiert
+- [x] Totholz / Fallstamm — bemooster Log in `reference_scene` (Platzhalter-Moos);
+  gelegentliche Wood-Logs in Forest-`generate_chunk`; Debris-Crate später
 
 Meilenstein: Komposition lenkt den Blick wie im Concept Art (dunkler Vordergrund,
 heller Fluchtpunkt).

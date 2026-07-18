@@ -185,17 +185,17 @@ bleibt nur hier in der Reference Scene.
   - **Player-Proxy** (~0,6×1,8×0,6) am Pfadrand — kein Character-Controller
   - Kamera auf **Augenhöhe (~1,6 m)** im Korridor
   - sparse Far trees / Kronenlücken für Lichtstrahlen
-  - **Unterholz (Layer 1+2 in der Demo erprobt):**
-    - Farne dicht an den Seiten + Stammfüßen (`grass_generator`, fern-lastig)
-    - Büsche als kleine Leaf-Voxel-Cluster (nur im Example, noch kein Crate)
-    - ein bemooster Fallstamm am Pfadrand (Wood + Moos-Tint-Würfel)
+  - **Unterholz:** Demo bleibt art-directed; prozedural in `understory.rs` /
+    `generate_chunk` (Forest): fern-lastiger Boden, Stammfuß-Farne, Leaf-Büsche,
+    gelegentliche Fallstämme. Moos-Tint und Pfad-Komposition nur in dieser Demo.
   - Steine als Seitenanker
 - **Licht (Phase-2-Spike an dieser Szene):** dunkles `GlobalAmbientLight`,
   DirectionalLight + Cascaded Shadow Maps + `VolumetricLight`/`VolumetricFog`/
   `FogVolume`, dezentes Bloom, SSAO (+ TAA)
 - **Bewusst nicht in der Demo:** spielbare Figur, Wasserlauf, Runenstein/Ruinen,
   echte `bevy_voxel_world`-Meshes, PBR-Texturen; keine globale Preset-Umstellung;
-  kein eigener `bush_generator` / Debris-Crate (erst nach visueller Validierung)
+  kein eigener `bush_generator` / Debris-Crate (Leaf-Büsche + Logs sind inline
+  in `understory.rs`; eigenes Crate nur bei Bedarf)
 - Screenshots: `docs/reference_scene_scale.png`, `docs/reference_scene_undergrowth.png`
 - Start: `cargo run -p world_generator --example reference_scene`
 
