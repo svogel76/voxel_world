@@ -5,19 +5,6 @@ Ziel: Der dunkle, atmosphärische "Blocky Forest"-Look mit bevy_voxel_world als 
 Kernerkenntnis aus der Konzeptanalyse: Der Stil entsteht **nicht** durch feinere Voxelauflösung,
 sondern durch Licht, Texturen und Postprocessing. Die Blockgröße bleibt klassisch.
 
-### Maßstab (Weltziel, bewusst realistischer als manches Concept Art)
-
-| Größe | Wert |
-|-------|------|
-| 1 Voxel-Kante | ≈ 1 m |
-| Spieler | ≈ 1,8 m (Augenhöhe ~1,6 m) |
-| Wald-Bäume | 15–30 m Höhe, Stammdicke ~2–5 m Basis |
-
-Der Spieler soll sich **klein** unter dem Kronendach fühlen. Style bleibt blockig;
-Proportionen dürfen vom Concept-Art-PNG abweichen (dort oft kompaktere Bäume).
-Validierung zuerst in `world_generator` → `examples/reference_scene.rs` (Player-Proxy
-+ Hero-Baum), bevor Forest-Presets in `generate_chunk` global angepasst werden.
-
 ---
 
 ## Phase 0 — Aktuelle minimale Engine abschließen (laufend)
@@ -31,20 +18,15 @@ diese Arbeit übernimmt — damit die Abstraktion kein Blackbox-Gefühl hinterl�
 ---
 
 ## Phase 1 — Umstieg auf bevy_voxel_world
-- [x] bevy_voxel_world in ein neues, separates Projekt einbinden (nicht die Lern-Engine umbauen)
-  → Crate [`crates/voxel_game`](../crates/voxel_game) mit `bevy_voxel_world` 0.17 (Bevy 0.19)
-- [x] Terrain-Generierung mit eigenem Noise-Backend an bevy_voxel_world anbinden
-  → `VoxelNoiseHeight` / `SimpleNoiseTerrain` als gemeinsamer Height-Source für Voxel-Fill
-  und `generate_chunk` (nicht `get_voxel` der Engine — unloaded chunks sind `Unset`)
-- [x] Chunk-Streaming/LOD-Verhalten des Crates verstehen (Config-Optionen, Render-Distance)
-  → `VoxelWorldCamera` + `spawning_distance`; LOD-Deep-Dive bewusst später
-- [x] Kollision/Physik-Integration mit **Avian3D** grundlegend testen
+- [ ] bevy_voxel_world in ein neues, separates Projekt einbinden (nicht die Lern-Engine umbauen)
+- [ ] Terrain-Generierung mit eigenem Noise-Backend an bevy_voxel_world anbinden
+  (Perlin-Wissen aus Phase 0 wird hier direkt wiederverwendet)
+- [ ] Chunk-Streaming/LOD-Verhalten des Crates verstehen (Config-Optionen, Render-Distance)
+- [ ] Kollision/Physik-Integration mit **Avian3D** grundlegend testen
   (Entscheidung: Avian statt bevy_rapier — native ECS-Integration, keine separate
   Physik-Welt, besser lesbarer Source Code; passt zu ECS-Denkweise)
-  - [x] `ColliderConstructor`/`ColliderConstructorHierarchy` zur automatischen
+  - [ ] `ColliderConstructor`/`ColliderConstructorHierarchy` zur automatischen
     Collider-Generierung aus den Terrain-Chunk-Meshes einrichten
-    → `ChunkWillSpawn` → `RigidBody::Static` + `ColliderConstructor::TrimeshFromMesh`
-    + begehbare Capsule (WASD)
 
 Meilenstein: Begehbares, generiertes Blockterrain — noch ohne Stil.
 
@@ -60,24 +42,22 @@ echten Szene mit Bäumen/Blätterdach getestet werden kann.
 ### Architektur: Cargo Workspace mit isolierten Generator-Crates
 Entscheidung: Jeder Sub-Generator (Baum, Gras, Stein, Weltgenerator als Orchestrator)
 wird ein eigenständiges Crate in einem gemeinsamen Cargo Workspace — kein Monolith.
-- [x] Workspace-Grundgerüst anlegen (`Cargo.toml` mit `[workspace] members = [...]`)
-- [x] Jeder Generator ist bewusst **Bevy-frei**: reine Rust-Logik (Seed + Parameter rein,
+- [ ] Workspace-Grundgerüst anlegen (`Cargo.toml` mit `[workspace] members = [...]`)
+- [ ] Jeder Generator ist bewusst **Bevy-frei**: reine Rust-Logik (Seed + Parameter rein,
   Datenstruktur wie `Vec<VoxelPos>` raus), damit er isoliert mit `cargo test -p <crate>`
   testbar ist, ohne die komplette Bevy-App zu starten
-- [x] Bevy wird pro Generator-Crate nur als `dev-dependency` eingebunden — sichtbar nur
+- [ ] Bevy wird pro Generator-Crate nur als `dev-dependency` eingebunden — sichtbar nur
   für `examples/`, nicht Teil der eigentlichen Library-API
-- [x] Visuelle Validierung pro Generator über ein eigenes `examples/visualize.rs`
+- [ ] Visuelle Validierung pro Generator über ein eigenes `examples/visualize.rs`
   (Äquivalent zur "Testszene" aus Unity), gestartet mit
   `cargo run -p <crate> --example visualize`
-- [x] Erst ein dünner Integrations-Layer im späteren Haupt-Spiel-Crate übersetzt die
+- [ ] Erst ein dünner Integrations-Layer im späteren Haupt-Spiel-Crate übersetzt die
   generierten Voxel-Daten in echte Bevy-Entities/Components
-  → `voxel_game::vegetation` spawnt eine feste Area aus `generate_chunk` als Cubes /
-  Gras-Cross-Quads auf dem Noise-Terrain
 
 ### Biom-/Zonen-Bestimmung
-- [x] Zweiter Noise-Layer (z.B. Feuchtigkeit) zusätzlich zur Höhenkarte
-- [x] Einfache Zonen ableiten (Wald, Fels, Lichtung) aus Höhe + Feuchtigkeit kombiniert
-- [x] Jedes Biom bekommt eigene Parameter (Baumdichte, Baumarten/L-System-Regelsätze,
+- [ ] Zweiter Noise-Layer (z.B. Feuchtigkeit) zusätzlich zur Höhenkarte
+- [ ] Einfache Zonen ableiten (Wald, Fels, Lichtung) aus Höhe + Feuchtigkeit kombiniert
+- [ ] Jedes Biom bekommt eigene Parameter (Baumdichte, Baumarten/L-System-Regelsätze,
   Grasdichte, Steindichte), die an die jeweiligen Sub-Generatoren weitergereicht werden —
   der Weltgenerator entscheidet *was* und *wie viel*, der Generator entscheidet *wie*
 - **Entscheidung — Terrain-Höhen-Zugriff:** `world_generator` bleibt Bevy-frei und
@@ -90,22 +70,20 @@ wird ein eigenständiges Crate in einem gemeinsamen Cargo Workspace — kein Mon
 ### Baumgenerator (mit Formgenerierung, nicht nur Platzierung)
 Entscheidung: Bäume werden prozedural per **L-System** erzeugt, nicht aus fertigen
 Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
-- [x] L-System-Grundlagen verstehen: Axiom, Produktionsregeln, Iterationstiefe
+- [ ] L-System-Grundlagen verstehen: Axiom, Produktionsregeln, Iterationstiefe
   (isoliert testen, z.B. nur als 2D-Textausgabe/Zeichenkette, bevor irgendwas 3D wird)
-- [x] Turtle-Graphics-Interpretation: Zeichenkette → Liste von 3D-Liniensegmenten
+- [ ] Turtle-Graphics-Interpretation: Zeichenkette → Liste von 3D-Liniensegmenten
   (Vorwärts, Abbiegen, Verzweigen/Stack push-pop für Äste)
-- [x] Voxelisierung: Liniensegmente → Voxel-Blöcke (Stamm dicker/gerader,
+- [ ] Voxelisierung: Liniensegmente → Voxel-Blöcke (Stamm dicker/gerader,
   Äste dünner, Bresenham-artiges Line-Voxelization-Verfahren)
-- [x] Blätter/Laubkronen hinzufügen (z.B. Voxel-Cluster an Astenden)
-- [x] Parametrische Variation (zufällige Winkel/Iterationstiefe innerhalb Grenzen,
+- [ ] Blätter/Laubkronen hinzufügen (z.B. Voxel-Cluster an Astenden)
+- [ ] Parametrische Variation (zufällige Winkel/Iterationstiefe innerhalb Grenzen,
   damit nicht jeder Baum identisch aussieht)
 
 ### Vegetationsgenerator (Farne, Gras)
-- [x] Einfachere prozedurale Form (kein volles L-System nötig, z.B. Billboard-Quads
+- [ ] Einfachere prozedurale Form (kein volles L-System nötig, z.B. Billboard-Quads
   oder simple Voxel-Cluster) — bewusst geringerer Aufwand als Bäume
-- [x] Dichte-basierte Verteilung (Zufalls-Sampling proportional zur Fläche, kein
-  echtes Noise-Feld nötig — bewusste Vereinfachung gegenüber Bäumen/Steinen, siehe
-  `grass_generator`-README)
+- [ ] Dichte-Noise für natürliche Verteilung statt Gleichverteilung
 - **Entscheidung:** Statische Kreuzquads (zwei senkrecht zueinander stehende
   Ebenen, per Zufallsrotation um Y variiert — wie in Minecraft), kein
   kamera-ausgerichtetes Echtzeit-Billboarding, keine Micro-Voxel-Cluster.
@@ -118,9 +96,8 @@ Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
   Bevy-Integrationsschicht.
 
 ### Steingenerator
-- [x] Einfache Voxel-Cluster-Formen mit Größen-/Rotationsvariation
-- [x] Verteilungsregel an Terrain-Steigung koppeln (mehr Steine an Hängen,
-  via `rock_density_multiplier(slope)` in `world_generator`)
+- [ ] Einfache Voxel-Cluster-Formen mit Größen-/Rotationsvariation
+- [ ] Verteilungsregel an Terrain-Steigung koppeln (z.B. mehr Steine an Hängen)
 - **Entscheidung — Technik:** 3D-Noise-Schwellenwert (Perlin/Simplex-Feld über
   eine Box, Voxel wird "Stein" wenn Noise-Wert > Schwelle), statt Ellipsoid
   mit Rand-Jitter oder 3D-Random-Walk. Begründung: Ellipsoid-Jitter behält
@@ -136,27 +113,16 @@ Modellen platziert — passt zum Voxel-Stil und ist eigenständig lehrreich.
   Struktur-/Ruinen-Generator (noch nicht in Arbeit) oder feste Hand-Prefabs.
 
 ### Platzierungslogik (gilt für alle Sub-Generatoren)
-- [x] Zugriff auf Terrain-Höhe an Position (X,Z) konsistent mit Voxel-Terrain
-  — `VoxelNoiseHeight` im `voxel_game`-Crate teilt denselben Height-Source mit dem
-  Voxel-Lookup (Engine-`get_voxel` bleibt für unloaded Chunks ungeeignet)
-- [x] Poisson-Disc-Sampling für natürlichen Mindestabstand bei Bäumen (Bridson's
-  Algorithmus, selbst implementiert in `world_generator`)
-- [x] Regeln an Terrain-Eigenschaften koppeln — für Steine umgesetzt (Hangsteigung
-  → Dichte-Multiplikator); für Bäume (zu steile Hänge → kein Baum) noch nicht
-  explizit umgesetzt, nur implizit über Poisson-Disc-Dichte
+- [ ] Zugriff auf Terrain-Höhe an Position (X,Z) aus bevy_voxel_world abfragen
+- [ ] Poisson-Disc-Sampling für natürlichen Mindestabstand (statt reinem Zufalls-Noise,
+  das zu Überlappungen führen kann)
+- [ ] Regeln an Terrain-Eigenschaften koppeln (z.B. zu steile Hänge → kein Baum)
 
 ### Performance & Kollision
 - [ ] GPU-Instancing/Mesh-Batching prüfen, sobald viele gleichartige Objekte
   (Bäume, Gras) in der Szene stehen — sonst bricht die Framerate früh ein
 - [ ] Vereinfachte Avian3D-Collider pro Objekttyp (z.B. Zylinder für Baumstamm,
   statt teurer Mesh-genauer Kollision)
-
-**Status:** Kernarbeit abgeschlossen (18.07.2026). Alle vier Crates
-(`tree_generator`, `grass_generator`, `rock_generator`, `world_generator`)
-phasenweise entwickelt, getestet und visuell validiert — zuletzt gemeinsam als
-`generate_chunk()` mit drei unterschiedlichen Biomen (Forest/Rocky/Clearing) in
-einer Szene mit terrain-höhengekoppelten Objekten. Offen bleiben: echte
-`bevy_voxel_world`-Anbindung (Teil von Phase 1), Performance/Kollision (später).
 
 Meilenstein: Ein Testchunk mit prozedural generierten, unterschiedlichen Bäumen,
 Farnen, Gras und Steinen — die Grundlage, an der Phase 2 (Licht) sinnvoll getestet
@@ -167,26 +133,14 @@ werden kann (dein "Lichtstrahl durchs Blätterdach"-Ziel braucht ein Blätterdac
 ## Phase 2 — Licht-Fundament
 Das ist der wichtigste Hebel für die Atmosphäre. Reihenfolge bewusst vor Texturen,
 weil Licht die Grundstimmung bestimmt, die Texturen später nur unterstützen.
-
-**Arbeitsweise (18.07.2026):** Zuerst eine art-directed **Reference Scene**
-(`world_generator` → `examples/reference_scene.rs`): Generator-Bausteine mit
-festen Seeds/Positionen handkomponieren (Rahmen, Blickachse, Kronenlücken),
-dann Licht an genau dieser Szene drehen. Erst danach Regeln zurück in den
-prozeduralen `world_generator` (nicht umgekehrt). Vergleichsbasis:
-`docs/Blocky_forest.png`.
-
-- [x] Directional Light + Schattenwurf sauber konfigurieren (Kaskaden-Shadow-Maps)
-  — in `reference_scene` via `CascadeShadowConfigBuilder`
-- [x] Volumetrisches Licht aktivieren und an einer Lichtungs-/Waldkanten-Szene testen
-  — `VolumetricFog` + `VolumetricLight` + `FogVolume` in `reference_scene`
+- [ ] Directional Light + Schattenwurf sauber konfigurieren (Kaskaden-Shadow-Maps)
+- [ ] Volumetrisches Licht aktivieren und an einer Lichtungs-/Waldkanten-Szene testen
 - [ ] Contact Shadows für Nahbereich-Details (Wurzeln, Blätter am Boden)
-- [x] SSAO für Tiefe in dichten Vegetations-Clustern — in `reference_scene`
-  (mit TAA / `Msaa::Off`)
-- [x] Bloom, dezent — in `reference_scene` (`Bloom::NATURAL`, niedrige Intensity)
+- [ ] SSAO für Tiefe in dichten Vegetations-Clustern
+- [ ] Bloom, dezent, nur auf tatsächliche Lichtquellen begrenzt
 
 Meilenstein: Eine einzelne Test-Szene (z.B. Lichtstrahl durch Blätterdach) die dem
 Concept Art schon nahekommt — rein durch Licht, mit Platzhalter-Texturen.
-Erste Version: `cargo run -p world_generator --example reference_scene`.
 
 ---
 
@@ -214,22 +168,10 @@ Meilenstein: Screenshots aus der Engine sind stimmungsmäßig mit dem Concept Ar
 ## Phase 5 — Vegetationsdichte & Layering
 Baut auf den Objekten aus Phase 1.5 auf (Bäume, Farne, Gras, Steine existieren bereits) —
 hier geht es um Komposition/Layering, nicht mehr um Erzeugung der Objekte selbst.
-
-**Vorarbeit aus der Reference Scene** (noch nicht automatisiert): dichter
-Stamm-Rahmen links/rechts, offene Mitte, sparse Far canopy für Lichtlöcher,
-Maßstab (Proxy 1,8 m / Hero ~20–25 m), **Unterholz** (dichte Farne, Bush-Cluster,
-bemooster Fallstamm). Regeln erst in Generatoren übernehmen, wenn die Demo
-stimmungsmäßig steht — siehe `world_generator` README → „Reference Scene“.
-
-- [x] Bush-/Blattwerk-Cluster als Layer — manuell in `reference_scene` erprobt
-  (Leaf-Voxel-Büsche); eigenes Crate / Instancing noch offen
+- [ ] Bush-/Blattwerk-Cluster als überlappende Objekt-Layer (nicht als einzelne Voxel)
 - [ ] Wind-Bewegung auf Blattwerk (Vertex-Shader-Animation, leicht)
 - [ ] Hängende Ranken/Lianen als eigene Objektklasse
-- [x] Dichteverteilung: dicht am Bildrand/Vordergrund, offener in der Bildmitte
-  — manuell in `reference_scene` erprobt (Farne/Büsche seitlich, Pfad frei);
-  prozedural noch offen
-- [x] Totholz / Fallstamm — ein bemooster Log in `reference_scene` (Platzhalter-Moos);
-  Debris-Generator später
+- [ ] Dichteverteilung: dicht am Bildrand/Vordergrund, offener in der Bildmitte (Sichtachsen lenken)
 
 Meilenstein: Komposition lenkt den Blick wie im Concept Art (dunkler Vordergrund,
 heller Fluchtpunkt).

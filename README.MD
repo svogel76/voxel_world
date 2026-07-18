@@ -1,8 +1,7 @@
 # voxel-world — Weltgenerator-Workspace
 
-Dieser Cargo Workspace enthält die Sub-Generatoren, die zusammen den **Weltgenerator**
-für das atmosphärische Voxel-Waldprojekt bilden (Phase 1.5 der
-[Roadmap](./Roadmap_Voxel_Atmosphere.md)).
+Dieser Cargo Workspace enthält die Sub-Generatoren und das Phase-1-Spielcrate für das
+atmosphärische Voxel-Waldprojekt (siehe [Roadmap](./docs/Roadmap_Voxel_Atmosphere.md)).
 
 ## Konzept
 
@@ -17,6 +16,8 @@ weitergereicht:
 - **rock_generator** — Voxel-Cluster-Steine mit Größen-/Rotationsvariation
 - **world_generator** — orchestriert die obigen, kennt die Biome, entscheidet *was* und
   *wie viel*; die einzelnen Generatoren entscheiden nur noch *wie* im Detail
+- **voxel_game** — Bevy-App: `bevy_voxel_world`-Terrain, Height-Adapter, ein
+  `generate_chunk`-Spawn und Avian-Capsule (Phase 1)
 
 ## Architekturprinzip: Bevy-freie Generatoren
 
@@ -29,16 +30,14 @@ Das ermöglicht:
 - **Isolierte Tests**: `cargo test -p tree_generator` ohne die komplette Spiel-App zu starten
 - **Fokussierte Entwicklung**: An genau einem System arbeiten, ohne den Rest im Kopf zu halten
 
-Bevy wird pro Crate nur als `dev-dependency` eingebunden, sichtbar ausschließlich für
-`examples/`. Jeder Generator bekommt so ein eigenes `examples/visualize.rs` — das
-Äquivalent zur Unity-Testszene, gestartet mit:
+Bevy wird pro Generator-Crate nur als `dev-dependency` eingebunden, sichtbar ausschließlich
+für `examples/`. Ausnahme: `voxel_game` darf Bevy / `bevy_voxel_world` / `avian3d` unter
+`[dependencies]` haben — dort findet die Integration statt.
 
 ```
 cargo run -p tree_generator --example visualize
+cargo run -p voxel_game
 ```
-
-Erst ein späteres Haupt-Spiel-Crate (`voxel_game`, kommt in einer späteren Phase dazu)
-übersetzt die von den Generatoren gelieferten Daten in echte Bevy-Entities.
 
 ## Struktur
 
@@ -47,15 +46,17 @@ voxel-world/
 ├── Cargo.toml              Workspace-Definition, gemeinsame Dependency-Versionen
 ├── README.md                diese Datei
 ├── Agents.md                 Arbeitsregeln für KI-Assistenten in diesem Projekt
+├── docs/
+│   └── Roadmap_Voxel_Atmosphere.md
 └── crates/
     ├── tree_generator/
     ├── grass_generator/
     ├── rock_generator/
-    └── world_generator/
+    ├── world_generator/
+    └── voxel_game/         Phase-1 Bevy-Integration
 ```
 
 ## Status
 
-Aktuell im Aufbau. Reihenfolge laut Roadmap: zuerst `tree_generator` (L-System-Grundlagen
-isoliert, dann Turtle-Interpretation, dann Voxelisierung), danach die einfacheren
-Generatoren, zuletzt `world_generator` als Orchestrator.
+Phase 1.5 (Generatoren) und Phase 1 (`voxel_game` Terrain + Vegetation-Spawn + Avian)
+sind umgesetzt. Als Nächstes: Licht/Atmosphäre auf echtem Terrain, Texturen später.

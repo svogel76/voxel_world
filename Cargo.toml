@@ -1,13 +1,17 @@
 [workspace]
 resolver = "2"
-members = ["crates/grass_generator",
+members = [
+    "crates/grass_generator",
     "crates/tree_generator",
-    "crates/grass_generator", "crates/rock_generator",
-    "crates/rock_generator", "crates/world_generator",
+    "crates/rock_generator",
     "crates/world_generator",
+    "crates/voxel_game",
 ]
 
 [workspace.dependencies]
 rand = "0.8"
 glam = "0.32"
 bevy = "0.19"
+bevy_voxel_world = "0.17"
+avian3d = "0.7"
+noise = "0.9"
