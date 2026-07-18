@@ -39,9 +39,13 @@ spätere Phasen, keine fertigen Lösungen ungefragt vorwegnehmen.
    - Weitere 3rd-Party-Crates (z.B. `avian3d`, `bevy_voxel_world`) vorher
      gemeinsam besprechen: Aufwand, Risiko, Pro/Contra.
 10. **Kein Zeitdruck, keine Phasen überspringen.** Aktuelle Phase erst
-    abschließen (siehe Roadmap), bevor die nächste beginnt.
+    abschließen (siehe Roadmap / `STATUS.md`), bevor die nächste beginnt.
+11. **`STATUS.md` mitführen.** Nach abgeschlossenen Meilensteinen oder
+    geänderten Prioritäten Stand und „Nächste Schritte“ dort aktualisieren
+    und mitcommitten — nicht bei jedem Agent-Lauf neu aus der Roadmap ableiten.
 
 ## Kontext
 
-Siehe `README.md` für das Architekturkonzept und
-`Roadmap_Voxel_Atmosphere.md` (Projektwissen) für den Gesamtplan.
+Siehe `STATUS.md` für **aktuellen Stand und nächste Schritte** (kurz, pflegen!),
+`README.md` für das Architekturkonzept und
+`docs/Roadmap_Voxel_Atmosphere.md` für den detaillierten Gesamtplan.

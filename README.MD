@@ -45,6 +45,7 @@ cargo run -p voxel_game
 voxel-world/
 ├── Cargo.toml              Workspace-Definition, gemeinsame Dependency-Versionen
 ├── README.md                diese Datei
+├── STATUS.md                aktueller Stand + nächste Schritte
 ├── Agents.md                 Arbeitsregeln für KI-Assistenten in diesem Projekt
 ├── docs/
 │   └── Roadmap_Voxel_Atmosphere.md
@@ -58,6 +59,8 @@ voxel-world/
 
 ## Status
 
-Phase 1.5 (Generatoren), Phase 1 (`voxel_game` Terrain + Vegetation + Avian) und
-Phase-2-Licht auf echtem Terrain (CSM, Volumetrics, Bloom, SSAO, FPS) sind umgesetzt.
-Als Nächstes: Scale-Feeling bestätigen, Unterholz-Regeln, dann Texturen (Phase 3).
+Aktueller Stand und nächste Schritte: **[`STATUS.md`](./STATUS.md)**.
+
+Kurz: Phase 1 / 1.5 und Phase-2-Licht (CSM, Volumetrics, Bloom, SSAO, FPS) sind
+umgesetzt. Als Nächstes: Scale-Feeling bestätigen, Unterholz-Regeln, dann
+Texturen (Phase 3).
