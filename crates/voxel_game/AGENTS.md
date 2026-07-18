@@ -16,3 +16,6 @@ This is the **only** crate that may depend on Bevy / `bevy_voxel_world` /
 5. Debug UX stays keybind + Bevy UI text (see `debug_console.rs`) unless egui
    is explicitly discussed. Day pause must not freeze Avian (`DayCycle`, not
    `Time<Virtual>::pause`).
+6. Keep day/night and debug **state logic** unit-tested as pure functions
+   (`DayCycle::advance`, `apply_debug_action`, …). Prefer that over full Bevy
+   `App` harnesses for keybinds/UI.

@@ -64,6 +64,15 @@ impl DayCycle {
     pub fn multiply_speed(&mut self, factor: f32) {
         self.speed = (self.speed * factor).clamp(0.125, 32.0);
     }
+
+    /// Advance `time_of_day` by `delta_secs` of real time (no-op when paused).
+    pub fn advance(&mut self, delta_secs: f32) {
+        if self.paused || self.day_length_secs <= 0.0 || delta_secs <= 0.0 {
+            return;
+        }
+        let step = delta_secs * self.speed / self.day_length_secs;
+        self.time_of_day = (self.time_of_day + step).rem_euclid(1.0);
+    }
 }
 
 pub struct DayNightPlugin;
@@ -78,11 +87,7 @@ impl Plugin for DayNightPlugin {
 }
 
 fn advance_day_cycle(time: Res<Time>, mut cycle: ResMut<DayCycle>) {
-    if cycle.paused || cycle.day_length_secs <= 0.0 {
-        return;
-    }
-    let step = time.delta_secs() * cycle.speed / cycle.day_length_secs;
-    cycle.time_of_day = (cycle.time_of_day + step).rem_euclid(1.0);
+    cycle.advance(time.delta_secs());
 }
 
 fn apply_day_night(
@@ -99,15 +104,13 @@ fn apply_day_night(
 
     if let Ok((mut transform, mut light)) = key_q.single_mut() {
         *transform = sun_transform(cycle.time_of_day);
-        light.illuminance = NOON_KEY_ILLUMINANCE * day.powf(1.35);
+        light.illuminance = key_illuminance(day);
         light.color = key_sun_color(day, dawn_dusk);
-        light.shadow_maps_enabled = day > 0.05;
+        light.shadow_maps_enabled = shadows_enabled(day);
     }
 
     if let Ok(mut fill) = fill_q.single_mut() {
-        // Keep a readable night fill so silhouettes do not disappear.
-        let fill_scale = 0.25 + 0.75 * day;
-        fill.illuminance = NOON_FILL_ILLUMINANCE * fill_scale;
+        fill.illuminance = fill_illuminance(day);
         fill.color = Color::srgb(
             0.35 + 0.05 * day,
             0.42 + 0.06 * day,
@@ -115,7 +118,7 @@ fn apply_day_night(
         );
     }
 
-    ambient.brightness = NIGHT_AMBIENT + (NOON_AMBIENT - NIGHT_AMBIENT) * day;
+    ambient.brightness = ambient_brightness(day);
     ambient.color = Color::srgb(
         0.14 + 0.08 * day,
         0.18 + 0.08 * day,
@@ -129,18 +132,38 @@ fn apply_day_night(
     );
 
     if let Ok(mut fog) = fog_q.single_mut() {
-        let density = if cycle.fog_enabled {
-            // Slightly thicker shafts at dawn/dusk.
-            cycle.fog_density * (0.85 + 0.35 * dawn_dusk)
-        } else {
-            0.0
-        };
-        fog.density_factor = density;
+        fog.density_factor = fog_density_factor(&cycle, dawn_dusk);
         fog.fog_color = Color::srgb(
             0.75 + 0.17 * day,
             0.80 + 0.14 * day,
             0.90 + 0.07 * day,
         );
+    }
+}
+
+fn key_illuminance(day_factor: f32) -> f32 {
+    NOON_KEY_ILLUMINANCE * day_factor.powf(1.35)
+}
+
+fn fill_illuminance(day_factor: f32) -> f32 {
+    // Keep a readable night fill so silhouettes do not disappear.
+    NOON_FILL_ILLUMINANCE * (0.25 + 0.75 * day_factor)
+}
+
+fn ambient_brightness(day_factor: f32) -> f32 {
+    NIGHT_AMBIENT + (NOON_AMBIENT - NIGHT_AMBIENT) * day_factor
+}
+
+fn shadows_enabled(day_factor: f32) -> bool {
+    day_factor > 0.05
+}
+
+fn fog_density_factor(cycle: &DayCycle, dawn_dusk: f32) -> f32 {
+    if cycle.fog_enabled {
+        // Slightly thicker shafts at dawn/dusk.
+        cycle.fog_density * (0.85 + 0.35 * dawn_dusk)
+    } else {
+        0.0
     }
 }
 
@@ -222,6 +245,17 @@ mod tests {
     }
 
     #[test]
+    fn horizon_glow_peaks_near_sunrise_and_sunset() {
+        let sunrise = solar_phase(0.25).horizon_glow;
+        let sunset = solar_phase(0.75).horizon_glow;
+        let noon = solar_phase(0.5).horizon_glow;
+        let midnight = solar_phase(0.0).horizon_glow;
+        assert!(sunrise > noon);
+        assert!(sunset > noon);
+        assert!(sunrise > midnight);
+    }
+
+    #[test]
     fn scrub_wraps_unit_interval() {
         let mut cycle = DayCycle::default();
         cycle.time_of_day = 0.95;
@@ -230,9 +264,92 @@ mod tests {
     }
 
     #[test]
-    fn clock_label_formats_noon() {
+    fn multiply_speed_is_clamped() {
+        let mut cycle = DayCycle::default();
+        cycle.speed = 1.0;
+        cycle.multiply_speed(0.5);
+        assert!((cycle.speed - 0.5).abs() < 1e-5);
+        for _ in 0..20 {
+            cycle.multiply_speed(0.5);
+        }
+        assert!((cycle.speed - 0.125).abs() < 1e-5);
+        for _ in 0..20 {
+            cycle.multiply_speed(2.0);
+        }
+        assert!((cycle.speed - 32.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reset_restores_defaults() {
+        let mut cycle = DayCycle::default();
+        cycle.time_of_day = 0.9;
+        cycle.speed = 8.0;
+        cycle.paused = true;
+        cycle.fog_enabled = false;
+        cycle.day_length_secs = 60.0;
+        cycle.reset();
+        assert_eq!(cycle.time_of_day, DEFAULT_TIME_OF_DAY);
+        assert_eq!(cycle.day_length_secs, DEFAULT_DAY_LENGTH_SECS);
+        assert!(!cycle.paused);
+        assert!((cycle.speed - 1.0).abs() < 1e-5);
+        assert!(cycle.fog_enabled);
+    }
+
+    #[test]
+    fn advance_respects_pause_and_speed() {
+        let mut running = DayCycle {
+            time_of_day: 0.0,
+            day_length_secs: 100.0,
+            speed: 1.0,
+            paused: false,
+            ..DayCycle::default()
+        };
+        running.advance(10.0);
+        assert!((running.time_of_day - 0.1).abs() < 1e-5);
+
+        let mut paused = running.clone();
+        paused.paused = true;
+        paused.advance(50.0);
+        assert!((paused.time_of_day - 0.1).abs() < 1e-5);
+
+        let mut fast = DayCycle {
+            time_of_day: 0.0,
+            day_length_secs: 100.0,
+            speed: 2.0,
+            paused: false,
+            ..DayCycle::default()
+        };
+        fast.advance(10.0);
+        assert!((fast.time_of_day - 0.2).abs() < 1e-5);
+    }
+
+    #[test]
+    fn advance_wraps_past_midnight() {
+        let mut cycle = DayCycle {
+            time_of_day: 0.95,
+            day_length_secs: 100.0,
+            speed: 1.0,
+            paused: false,
+            ..DayCycle::default()
+        };
+        cycle.advance(10.0); // +0.1 → wraps to 0.05
+        assert!((cycle.time_of_day - 0.05).abs() < 1e-5);
+    }
+
+    #[test]
+    fn clock_label_formats_key_times() {
         assert_eq!(clock_label(0.5), "12:00");
         assert_eq!(clock_label(0.0), "00:00");
+        assert_eq!(clock_label(0.25), "06:00");
+        assert_eq!(clock_label(0.75), "18:00");
+    }
+
+    #[test]
+    fn elevation_degrees_match_solar_extremes() {
+        let noon = elevation_degrees(0.5);
+        let midnight = elevation_degrees(0.0);
+        assert!(noon > 80.0, "noon elev={noon}");
+        assert!(midnight < -80.0, "midnight elev={midnight}");
     }
 
     #[test]
@@ -241,5 +358,33 @@ mod tests {
         assert!(t.translation.y > LOOK_TARGET.y + 20.0);
         let night = sun_transform(0.0);
         assert!(night.translation.y < LOOK_TARGET.y);
+    }
+
+    #[test]
+    fn lighting_scales_with_day_factor() {
+        let noon = solar_phase(0.5).day_factor;
+        let midnight = solar_phase(0.0).day_factor;
+        assert!(key_illuminance(noon) > key_illuminance(midnight) * 10.0);
+        assert!(fill_illuminance(noon) > fill_illuminance(midnight));
+        assert!(ambient_brightness(noon) > ambient_brightness(midnight));
+        assert!(shadows_enabled(noon));
+        assert!(!shadows_enabled(midnight));
+    }
+
+    #[test]
+    fn fog_density_zero_when_disabled() {
+        let mut cycle = DayCycle::default();
+        let dawn = solar_phase(0.25).horizon_glow;
+        assert!(fog_density_factor(&cycle, dawn) > 0.0);
+        cycle.fog_enabled = false;
+        assert_eq!(fog_density_factor(&cycle, dawn), 0.0);
+    }
+
+    #[test]
+    fn fog_thicker_at_dawn_than_noon() {
+        let cycle = DayCycle::default();
+        let dawn = fog_density_factor(&cycle, solar_phase(0.25).horizon_glow);
+        let noon = fog_density_factor(&cycle, solar_phase(0.5).horizon_glow);
+        assert!(dawn > noon);
     }
 }
