@@ -5,6 +5,19 @@ Ziel: Der dunkle, atmosphärische "Blocky Forest"-Look mit bevy_voxel_world als 
 Kernerkenntnis aus der Konzeptanalyse: Der Stil entsteht **nicht** durch feinere Voxelauflösung,
 sondern durch Licht, Texturen und Postprocessing. Die Blockgröße bleibt klassisch.
 
+### Maßstab (Weltziel, bewusst realistischer als manches Concept Art)
+
+| Größe | Wert |
+|-------|------|
+| 1 Voxel-Kante | ≈ 1 m |
+| Spieler | ≈ 1,8 m (Augenhöhe ~1,6 m) |
+| Wald-Bäume | 15–30 m Höhe, Stammdicke ~2–5 m Basis |
+
+Der Spieler soll sich **klein** unter dem Kronendach fühlen. Style bleibt blockig;
+Proportionen dürfen vom Concept-Art-PNG abweichen (dort oft kompaktere Bäume).
+Validierung zuerst in `world_generator` → `examples/reference_scene.rs` (Player-Proxy
++ Hero-Baum), bevor Forest-Presets in `generate_chunk` global angepasst werden.
+
 ---
 
 ## Phase 0 — Aktuelle minimale Engine abschließen (laufend)
@@ -150,14 +163,26 @@ werden kann (dein "Lichtstrahl durchs Blätterdach"-Ziel braucht ein Blätterdac
 ## Phase 2 — Licht-Fundament
 Das ist der wichtigste Hebel für die Atmosphäre. Reihenfolge bewusst vor Texturen,
 weil Licht die Grundstimmung bestimmt, die Texturen später nur unterstützen.
-- [ ] Directional Light + Schattenwurf sauber konfigurieren (Kaskaden-Shadow-Maps)
-- [ ] Volumetrisches Licht aktivieren und an einer Lichtungs-/Waldkanten-Szene testen
+
+**Arbeitsweise (18.07.2026):** Zuerst eine art-directed **Reference Scene**
+(`world_generator` → `examples/reference_scene.rs`): Generator-Bausteine mit
+festen Seeds/Positionen handkomponieren (Rahmen, Blickachse, Kronenlücken),
+dann Licht an genau dieser Szene drehen. Erst danach Regeln zurück in den
+prozeduralen `world_generator` (nicht umgekehrt). Vergleichsbasis:
+`docs/Blocky_forest.png`.
+
+- [x] Directional Light + Schattenwurf sauber konfigurieren (Kaskaden-Shadow-Maps)
+  — in `reference_scene` via `CascadeShadowConfigBuilder`
+- [x] Volumetrisches Licht aktivieren und an einer Lichtungs-/Waldkanten-Szene testen
+  — `VolumetricFog` + `VolumetricLight` + `FogVolume` in `reference_scene`
 - [ ] Contact Shadows für Nahbereich-Details (Wurzeln, Blätter am Boden)
-- [ ] SSAO für Tiefe in dichten Vegetations-Clustern
-- [ ] Bloom, dezent, nur auf tatsächliche Lichtquellen begrenzt
+- [x] SSAO für Tiefe in dichten Vegetations-Clustern — in `reference_scene`
+  (mit TAA / `Msaa::Off`)
+- [x] Bloom, dezent — in `reference_scene` (`Bloom::NATURAL`, niedrige Intensity)
 
 Meilenstein: Eine einzelne Test-Szene (z.B. Lichtstrahl durch Blätterdach) die dem
 Concept Art schon nahekommt — rein durch Licht, mit Platzhalter-Texturen.
+Erste Version: `cargo run -p world_generator --example reference_scene`.
 
 ---
 
@@ -185,10 +210,17 @@ Meilenstein: Screenshots aus der Engine sind stimmungsmäßig mit dem Concept Ar
 ## Phase 5 — Vegetationsdichte & Layering
 Baut auf den Objekten aus Phase 1.5 auf (Bäume, Farne, Gras, Steine existieren bereits) —
 hier geht es um Komposition/Layering, nicht mehr um Erzeugung der Objekte selbst.
+
+**Vorarbeit aus der Reference Scene** (noch nicht automatisiert): dichter
+Stamm-Rahmen links/rechts, offene Mitte, sparse Far canopy für Lichtlöcher,
+Gras dicht vorn / dünn auf dem Pfad. Diese Regeln erst übernehmen, wenn die
+Demo stimmungsmäßig steht — siehe `world_generator` README → „Reference Scene“.
+
 - [ ] Bush-/Blattwerk-Cluster als überlappende Objekt-Layer (nicht als einzelne Voxel)
 - [ ] Wind-Bewegung auf Blattwerk (Vertex-Shader-Animation, leicht)
 - [ ] Hängende Ranken/Lianen als eigene Objektklasse
 - [ ] Dichteverteilung: dicht am Bildrand/Vordergrund, offener in der Bildmitte (Sichtachsen lenken)
+  — manuell in `reference_scene` erprobt; prozedural noch offen
 
 Meilenstein: Komposition lenkt den Blick wie im Concept Art (dunkler Vordergrund,
 heller Fluchtpunkt).

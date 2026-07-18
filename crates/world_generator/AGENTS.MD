@@ -40,6 +40,10 @@ Workspace). Es bleibt trotzdem **Bevy-frei** — keine Abhängigkeit auf
 - `src/biome.rs` — Phase 1+2 (Zonen-Bestimmung, Parameter-Zuordnung)
 - `src/placement.rs` — Phase 3 (Poisson-Disc, Hangsteigung)
 - `src/chunk.rs` — Phase 4 (Orchestrierung, `ChunkContent`)
-- `examples/visualize.rs` — Phase 5, einzige Stelle mit Bevy-Bezug
+- `examples/visualize.rs` — Phase 5 Biom-/Chunk-Check (Bevy nur hier + unten)
+- `examples/reference_scene.rs` — art-directed Hero Shot (feste Platzierung +
+  Licht-Spike + Scale-Spike: Player-Proxy 1.8 m, Hero-Baum ~20–25 m);
+  Kompositions-/Maßstabsregeln in README, **nicht** sofort in `generate_chunk`
+  automatisieren / Presets global umstellen
 
 Moderne Modulstruktur (keine `mod.rs`) gemäß Root-`Agents.md`.

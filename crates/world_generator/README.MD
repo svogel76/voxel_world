@@ -153,6 +153,45 @@ Positionen stabil. Gleicher World-Seed + gleiche Position → gleiche Form.
   world_generator --example visualize`
 - Start: `cargo run -p world_generator --example visualize`
 
+### Reference Scene — art-directed hero shot (vor Phase-2-Feinschliff)
+
+`examples/reference_scene.rs` ist **kein** Chunk-/Biom-Test, sondern eine
+bewusst komponierte Demo gegen `docs/Blocky_forest.png`.
+
+#### Maßstabskonvention (Weltziel)
+
+| Größe | Wert | Bedeutung |
+|-------|------|-----------|
+| 1 Voxel-Kante | **≈ 1 m** | klassische Blockgröße, kein Micro-Voxel |
+| Spieler | **≈ 1,8 m** (Augenhöhe ~1,6 m) | Maßstabsanker |
+| Wald-Bäume | **15–30 m** | deutsche Waldhöhe; Spieler soll sich klein fühlen |
+| Stammdicke | **~2–5 m** Basis | sonst wirken hohe Bäume wie Streichhölzer |
+
+Stil bleibt blockig (wie Concept Art); die **Proportion** darf realistischer
+sein als im PNG (dort eher kompakte Illustrations-Bäume). Forest-`TreeParams`
+in `generate_chunk` noch **nicht** global umgestellt — erst Scale-Spike in der
+Reference Scene validieren.
+
+- **Semi-manuell:** feste Seeds + feste `(x, z)`-Positionen rufen
+  `tree_generator::generate` / `rock_generator::generate` /
+  `grass_generator::generate` direkt auf — **nicht** `generate_chunk()`
+- **Komposition (was der Generator später lernen soll):**
+  - dichter Stamm-Rahmen links/rechts; ein **Hero-Baum ~20–25 m** als Höhenanker
+  - offene Blickachse in der Mitte (kein Gras/keine Bäume auf dem Pfad)
+  - **Player-Proxy** (~0,6×1,8×0,6) am Pfadrand — kein Character-Controller
+  - Kamera auf **Augenhöhe (~1,6 m)** im Korridor
+  - sparse Far trees / Kronenlücken für Lichtstrahlen
+  - Gras seitlich dicht, Mitte frei; Steine als Seitenanker
+- **Licht (Phase-2-Spike an dieser Szene):** dunkles `GlobalAmbientLight`,
+  DirectionalLight + Cascaded Shadow Maps + `VolumetricLight`/`VolumetricFog`/
+  `FogVolume`, dezentes Bloom, SSAO (+ TAA)
+- **Bewusst nicht in der Demo:** spielbare Figur, Wasserlauf, Runenstein/Ruinen,
+  echte `bevy_voxel_world`-Meshes, PBR-Texturen; keine globale Preset-Umstellung
+- Start: `cargo run -p world_generator --example reference_scene`
+
+Erst wenn die Reference Scene stimmungsmäßig **und** maßstäblich passt, Regeln
+zurück in `generate_chunk` / Phase 5 (Layering) — nicht umgekehrt.
+
 ## Öffentliche API (Zielbild)
 
 ```rust
