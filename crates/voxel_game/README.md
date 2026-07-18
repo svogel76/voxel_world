@@ -1,7 +1,7 @@
 # voxel_game
 
-Phase-1 game crate: Bevy app that integrates `bevy_voxel_world` terrain with
-`world_generator` vegetation and Avian3D physics.
+Phase-2 game crate: Bevy app that integrates `bevy_voxel_world` terrain with
+`world_generator` vegetation, Avian3D physics, and reference-scene mood lighting.
 
 ## What this crate owns
 
@@ -10,12 +10,13 @@ Phase-1 game crate: Bevy app that integrates `bevy_voxel_world` terrain with
 - `TerrainHeightSource` backed by the **same** height function as the voxels
 - Spawning one `generate_chunk` area as placeholder cubes / grass quads
 - Avian static colliders on chunk meshes + a simple walkable capsule
+- Phase-2 mood: CSM key/fill lights, volumetric fog, Bloom, SSAO, FPS overlay
 
 ## What it deliberately does not own
 
 - L-System / grass / rock algorithms (stay in generator crates)
 - Textures / atlas (Phase 3)
-- Reference-scene art direction (stays in `world_generator` examples)
+- Reference-scene composition (hand-placed hero shot stays in `world_generator` examples)
 
 ## Run
 

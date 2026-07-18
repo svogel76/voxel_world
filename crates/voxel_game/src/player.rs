@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use bevy_voxel_world::prelude::ChunkWillSpawn;
 
 use crate::height::VoxelNoiseHeight;
+use crate::lighting::mood_camera_bundle;
 use crate::terrain::VoxelTerrain;
 use world_generator::TerrainHeightSource;
 
@@ -57,7 +58,7 @@ pub fn spawn_player(
             parent.spawn((
                 Name::new("PlayerCamera"),
                 PlayerCamera,
-                Camera3d::default(),
+                mood_camera_bundle(),
                 Transform::from_xyz(0.0, 1.6, 6.0).looking_at(Vec3::new(0.0, 1.2, 0.0), Vec3::Y),
             ));
         });
