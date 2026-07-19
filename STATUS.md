@@ -4,7 +4,7 @@ Kurzüberblick für Menschen und Agents: **wo stehen wir, was kommt als Nächste
 Detail-Checklisten und Entscheidungen bleiben in
 [`docs/Roadmap_Voxel_Atmosphere.md`](./docs/Roadmap_Voxel_Atmosphere.md).
 
-**Zuletzt aktualisiert:** 18.07.2026 (Debug Console + Tag/Nacht)
+**Zuletzt aktualisiert:** 19.07.2026 (Sky-Mini vor Phase 3 priorisiert)
 
 ---
 
@@ -20,7 +20,8 @@ Detail-Checklisten und Entscheidungen bleiben in
 | Unterholz-Regeln | Farne / Büsche / Fallstämme in Forest-`generate_chunk` |
 | Debug Console | F1-Overlay + Keybinds in `voxel_game` |
 | Tag/Nacht-Zyklus | `DayCycle` steuert Key-Sun / Ambient / Fog |
-| Phase 3–6 | noch nicht begonnen |
+| Sky-Mini | als Nächstes (vor Phase 3) |
+| Phase 3–7 | noch nicht begonnen |
 
 ### Was läuft schon
 
@@ -43,8 +44,9 @@ Detail-Checklisten und Entscheidungen bleiben in
 
 ## Nächste Schritte (Reihenfolge)
 
-1. **Lokal gegenprüfen** — Scale, Unterholz, Tag/Nacht (`]` beschleunigen, `T` scrubben)
-2. **Phase 3 — Texturen & Materialien** — Atlas/PBR, nicht vorher vorziehen
+1. **Sky-Mini** — Gradient-/Dome-Himmel an `DayCycle` (+ optional Sonnen-Billboard)
+2. **Phase 3 — Texturen & Materialien** — Atlas/PBR
+3. Später: Phase 4.5 (Skybox / Sterne / leichte Wolken), Phase 7 (Wetter)
 
 Ein Schritt, eine sichtbare Veränderung. Keine Phasen überspringen
 (siehe Root-[`AGENTS.MD`](./AGENTS.MD)).
@@ -62,7 +64,8 @@ Ein Schritt, eine sichtbare Veränderung. Keine Phasen überspringen
 | Wind, Lianen, prozedurales Layering (Phase 5) | nach Texturen / wenn Komposition steht |
 | Eigenes `bush_generator` / Debris-Crate | optional; Logik inline in `understory.rs` |
 | Typed command console / egui | Keybinds reichen vorerst |
-| Skybox / Sterne / Mond-Mesh | Tag/Nacht steuert nur Licht/Fog |
+| Skybox / Sterne / Mond / leichte Wolken | Phase 4.5 — nach Texturen |
+| Volumetrische Wolken / Wetter | Phase 7 — nach Style-Fundament |
 | Phase 0 Stages 4–5 | Lernpfad; nicht Voraussetzung für aktuelle Arbeit |
 
 ---

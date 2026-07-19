@@ -196,6 +196,21 @@ Ohne lokale GPU-Validierung schwer zu iterieren; daher vor Phase 3:
 - [x] Tag/Nacht-Zyklus — Key-Sun-Orbit, Ambient/Clear/Fog über `DayCycle`
   (Default 10 min/Tag; Pause friert nicht die Physik ein)
 
+### Nächster Schritt — Sky-Mini (in `voxel_game`, vor Phase 3)
+Tag/Nacht steuert bisher nur Licht/Fog/`ClearColor` — der Himmel bleibt schwarz.
+Ein kleiner Abschluss macht den Zyklus lesbar, ohne Wetter-Engine:
+
+- [ ] Sky-Dome oder Gradient-Himmel an `DayCycle` koppeln
+  (Tag kühles Blau → Abend warm → Nacht dunkel)
+- [ ] Optional: Sonnen-Billboard entlang der Key-Sun-Richtung
+  (nur Optik; das Directional Light bleibt die echte Lichtquelle)
+
+**Bewusst nicht in diesem Schritt:** Cubemap-Skybox, Sternenhimmel,
+volumetrische Wolken, Wetter — siehe Phase 4.5 und Phase 7.
+
+Meilenstein: Mit `T` / Speed sieht man den Tageswechsel auch am Himmel,
+nicht nur an Schatten und Console.
+
 ---
 
 ## Phase 3 — Texturen & Materialien
@@ -216,6 +231,21 @@ Meilenstein: Terrain-Oberflächen wirken materialhaft statt kachelig.
 - [ ] Selektive Highlights: bewusst wenige, helle Bildbereiche (wie das Wasser im Concept Art)
 
 Meilenstein: Screenshots aus der Engine sind stimmungsmäßig mit dem Concept Art vergleichbar.
+
+---
+
+## Phase 4.5 — Himmel ausbauen (nach Texturen / wenn FPS stabiler)
+Baut auf Sky-Mini auf. Erst wenn Phase-3-Materialien und die Grundstimmung stehen,
+damit Himmel-Arbeit nicht gegen unfertige Böden und teure Volumetrics konkurriert.
+
+- [ ] Richtige Skybox / reichhaltigerer Dome (Cubemap oder prozeduraler Shader)
+- [ ] Sternenhimmel bei Nacht (ausfadend mit `day_factor`)
+- [ ] Mond-Scheibe (optional, analog zur Sonnen-Billboard)
+- [ ] Leichte Bewölkung — bewusst einfach zuerst
+  (2D-/Dome-Billboards oder simpler Cloud-Layer, **keine** volumetrischen Wolken)
+
+Meilenstein: Tag und Nacht sind am Himmel klar lesbar; leichte Wolken ohne
+Wetter-System.
 
 ---
 
@@ -248,6 +278,20 @@ heller Fluchtpunkt).
 - [ ] Referenz-Screenshot vs. Concept Art direkt gegenüberstellen
 - [ ] Iterativ an Licht/Farbe/Dichte nachjustieren
 - [ ] Performance-Check bei voller Vegetationsdichte (Draw Calls, Chunk-Radius)
+
+---
+
+## Phase 7 — Wetter (eigenes Thema, nach Style-Fundament)
+Erst wenn Himmel (4.5), Texturen und Performance grob stehen. Wetter ist kein
+Sky-Mini-Aufsatz, sondern eigener Meilenstein (Regeln, Optik, Kosten).
+
+- [ ] Wetter-Zustände modellieren (klar / bedeckt / Regen — bewusst klein starten)
+- [ ] Wolken-Dichte und Ambient an Wetter koppeln (auf Phase-4.5-Bewölkung aufbauen)
+- [ ] Volumetrische Wolken nur als optionaler Spike, wenn FPS es hergibt
+- [ ] Regen/Partikel und Boden-Nässe (falls stilistisch nötig) — nach Optik-Grundlage
+
+Meilenstein: Wetter ändert Stimmung und Lesbarkeit, ohne den Blocky-Forest-Look
+zu sprengen.
 
 ---
 

@@ -17,7 +17,10 @@ use day_night::DayNightPlugin;
 use debug_console::DebugConsolePlugin;
 use fps::FpsPlugin;
 use lighting::{insert_mood_resources, setup_lights};
-use player::{attach_chunk_colliders, player_look, player_move, spawn_player, PlayerCamera};
+use player::{
+    attach_chunk_colliders, enable_player_on_terrain, player_look, player_move, spawn_player,
+    PlayerCamera,
+};
 use terrain::{TerrainCamera, VoxelTerrain};
 use vegetation::spawn_vegetation_chunk;
 
@@ -44,9 +47,10 @@ fn main() {
         Update,
         (
             mark_voxel_camera,
+            attach_chunk_colliders,
+            enable_player_on_terrain,
             player_look,
             player_move,
-            attach_chunk_colliders,
         ),
     )
     .run();
