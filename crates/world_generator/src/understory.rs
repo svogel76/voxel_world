@@ -17,7 +17,7 @@ pub const TRUNK_FERN_DENSITY: f32 = 3.2;
 /// Half-extent of the trunk-foot fern AABB in world XZ meters.
 pub const TRUNK_FERN_HALF_EXTENT: f32 = 2.5;
 /// Chance that a forest tree gets a nearby fallen log.
-pub const FALLEN_LOG_CHANCE: f32 = 0.22;
+pub const FALLEN_LOG_CHANCE: f32 = 0.5;
 /// Bushes placed per forest tree (fixed count keeps density predictable).
 pub const BUSHES_PER_TREE: u32 = 2;
 
@@ -88,6 +88,26 @@ pub fn fallen_log_voxels(seed: u64) -> Vec<IVec3> {
     voxels
 }
 
+/// Chance that an upper log face gets a moss pad on top.
+const FALLEN_LOG_MOSS_CHANCE: f64 = 0.55;
+
+/// Moss pads on the upper face of a fallen log (same idea as `reference_scene`).
+///
+/// Positions are relative to the same origin as `log` voxels. Only cells with
+/// `y >= 1` are candidates so moss sits on the top of the 2-high trunk section.
+pub fn fallen_log_moss_voxels(seed: u64, log: &[IVec3]) -> Vec<IVec3> {
+    let mut rng = StdRng::seed_from_u64(seed.wrapping_add(0x4D_05_5E_ED));
+    let mut moss = Vec::new();
+    for p in log {
+        if p.y >= 1 && rng.gen_bool(FALLEN_LOG_MOSS_CHANCE) {
+            moss.push(IVec3::new(p.x, p.y + 1, p.z));
+        }
+    }
+    moss.sort_by_key(|p| (p.x, p.y, p.z));
+    moss.dedup();
+    moss
+}
+
 /// Axis-aligned fern patch around a tree, clipped to the chunk area.
 pub fn trunk_fern_area(tree_xz: Vec2, chunk: &grass_generator::Area) -> Option<grass_generator::Area> {
     let h = TRUNK_FERN_HALF_EXTENT;
@@ -132,6 +152,22 @@ mod tests {
         assert_eq!(a, b);
         assert!(a.len() >= 10);
         assert!(a.iter().all(|p| p.y == 0 || p.y == 1));
+    }
+
+    #[test]
+    fn fallen_log_moss_is_deterministic_and_above_log() {
+        let log = fallen_log_voxels(99);
+        let a = fallen_log_moss_voxels(99, &log);
+        let b = fallen_log_moss_voxels(99, &log);
+        assert_eq!(a, b);
+        assert!(!a.is_empty());
+        assert!(a.iter().all(|p| p.y >= 2));
+        for m in &a {
+            assert!(
+                log.iter().any(|l| l.x == m.x && l.z == m.z && l.y == m.y - 1),
+                "moss {m:?} must sit on a log cell"
+            );
+        }
     }
 
     #[test]

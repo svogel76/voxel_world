@@ -13,8 +13,8 @@ use crate::placement::{
 };
 use crate::terrain::TerrainHeightSource;
 use crate::understory::{
-    bush_cluster_voxels, fallen_log_voxels, fern_carpet_params, trunk_fern_area, BUSHES_PER_TREE,
-    FALLEN_LOG_CHANCE, TRUNK_FERN_DENSITY,
+    bush_cluster_voxels, fallen_log_moss_voxels, fallen_log_voxels, fern_carpet_params,
+    trunk_fern_area, BUSHES_PER_TREE, FALLEN_LOG_CHANCE, TRUNK_FERN_DENSITY,
 };
 
 /// Discriminator mixed into [`feature_seed`] so features never share a stream.
@@ -32,6 +32,8 @@ pub enum WorldBlockType {
     Wood,
     Leaf,
     Stone,
+    /// Transition pads on logs / rocks (Phase 3 moss overlays).
+    Moss,
 }
 
 impl From<tree_generator::BlockType> for WorldBlockType {
@@ -177,10 +179,17 @@ fn place_forest_understory(
         }
         let log_seed = feature_seed(seed, LOG_FEATURE_KIND, tree.x, tree.y);
         let origin = world_origin(tree.x, tree.y, terrain);
-        for local in fallen_log_voxels(log_seed) {
-            let world = origin + local;
+        let log_locals = fallen_log_voxels(log_seed);
+        for local in &log_locals {
+            let world = origin + *local;
             if point_in_area(world.x as f32, world.z as f32, area) {
                 voxels.push((world, WorldBlockType::Wood));
+            }
+        }
+        for local in fallen_log_moss_voxels(log_seed, &log_locals) {
+            let world = origin + local;
+            if point_in_area(world.x as f32, world.z as f32, area) {
+                voxels.push((world, WorldBlockType::Moss));
             }
         }
     }
@@ -486,10 +495,12 @@ mod tests {
         let chunk_area = area(0.0, 0.0, 16.0, 16.0);
         let content = generate_chunk(3, chunk_area, &terrain);
         assert!(!content.grass_instances.is_empty());
+        // Grass sits on the voxel surface (`floor(height)`), same as trunks/rocks.
+        let expected_y = 7.0;
         for instance in &content.grass_instances {
             assert!(
-                (instance.position.y - 7.5).abs() < 1e-5,
-                "grass y={} expected 7.5",
+                (instance.position.y - expected_y).abs() < 1e-5,
+                "grass y={} expected {expected_y}",
                 instance.position.y
             );
         }
@@ -525,9 +536,20 @@ mod tests {
         // Require a non-trivial leaf presence as a smoke signal for bushes+canopy.
         assert!(leaf > 50, "expected leaf voxels from crowns/bushes, got {leaf}");
 
-        // With several trees and ~22% log chance, a 40×40 forest should usually
+        // With several trees and ~50% log chance, a 40×40 forest should usually
         // gain extra wood beyond trunks; at minimum wood must exist.
         assert!(count_wood(&content) > 0);
+
+        let moss = content
+            .tree_and_rock_voxels
+            .iter()
+            .filter(|(_, b)| *b == WorldBlockType::Moss)
+            .count();
+        // Logs carry ~55% moss pads on the upper face — expect some when wood exists.
+        assert!(
+            moss > 0,
+            "fallen logs should spawn moss pads, got moss={moss}"
+        );
     }
 
     #[test]
@@ -555,5 +577,40 @@ mod tests {
             }
         }
         panic!("could not find a seed that classifies area center as Forest");
+    }
+
+    /// Guard: default `voxel_game` terrain band must still allow Forest near origin.
+    /// (Regression: ROCKY_MIN_HEIGHT=10 made ±40 m around spawn 100% Rocky.)
+    #[test]
+    fn voxel_game_terrain_allows_forest_near_origin() {
+        use crate::terrain::SimpleNoiseTerrain;
+        let terrain = SimpleNoiseTerrain {
+            seed: 42,
+            frequency: 0.02,
+            amplitude: 12.0,
+            base: 8.0,
+        };
+        let chunk_area = area(-16.0, -16.0, 16.0, 16.0);
+        let center = area_center(&chunk_area);
+        let biome = classify(center.x, center.y, 42, &terrain);
+        assert_ne!(
+            biome,
+            Biome::Rocky,
+            "spawn vegetation area should not be Rocky (height={:.2})",
+            terrain.height_at(center.x, center.y)
+        );
+
+        if biome == Biome::Forest {
+            let content = generate_chunk(42, chunk_area, &terrain);
+            let moss = content
+                .tree_and_rock_voxels
+                .iter()
+                .filter(|(_, b)| *b == WorldBlockType::Moss)
+                .count();
+            assert!(
+                moss > 0,
+                "Forest spawn chunk should place moss on fallen logs"
+            );
+        }
     }
 }

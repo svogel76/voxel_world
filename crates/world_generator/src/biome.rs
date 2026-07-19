@@ -120,7 +120,12 @@ pub fn params_for(biome: Biome) -> BiomeParams {
 }
 
 /// World Y at or above this value is always [`Biome::Rocky`].
-pub const ROCKY_MIN_HEIGHT: f32 = 10.0;
+///
+/// Tuned for `voxel_game`'s terrain band (~base 8 + amplitude 12 → heights
+/// roughly 8–20): only the upper peaks stay Rocky. At 10.0 almost the entire
+/// default world classified as Rocky and Forest understory never appeared
+/// near spawn (origin sits around height ~16).
+pub const ROCKY_MIN_HEIGHT: f32 = 17.0;
 
 /// Below [`ROCKY_MIN_HEIGHT`], moisture under this value yields [`Biome::Clearing`].
 pub const CLEARING_MAX_MOISTURE: f32 = 0.4;

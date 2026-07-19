@@ -3,6 +3,9 @@
 //! Three small 10×10 areas side by side (Forest / Rocky / Clearing).
 //! Each panel has a heightfield ground sampled from its `TerrainHeightSource`.
 //!
+//! **Flat debug colors** (not game textures): Wood=brown, Leaf=green, Stone=grey,
+//! Moss=dark-green. Textured materials live in `voxel_game`.
+//!
 //! Run:
 //! ```text
 //! cargo run -p world_generator --example visualize
@@ -103,6 +106,11 @@ fn panels() -> [Panel; 3] {
 fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins)
+        .insert_resource(GlobalAmbientLight {
+            color: Color::srgb(0.55, 0.58, 0.62),
+            brightness: 280.0,
+            ..default()
+        })
         .add_plugins(FreeCameraPlugin)
         .add_systems(Startup, (setup_scene, spawn_help_text));
 
@@ -158,6 +166,11 @@ fn setup_scene(
         perceptual_roughness: 0.95,
         ..default()
     });
+    let moss_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.18, 0.42, 0.16),
+        perceptual_roughness: 0.95,
+        ..default()
+    });
     let quad_mesh = meshes.add(Rectangle::new(CLUMP_WIDTH, CLUMP_HEIGHT));
     let grass_material = materials.add(variant_material(grass_generator::GrassVariant::Grass));
     let fern_material = materials.add(variant_material(grass_generator::GrassVariant::Fern));
@@ -165,7 +178,7 @@ fn setup_scene(
         // Bright earth tone — must stay readable under canopy shadows.
         base_color: Color::srgb(0.62, 0.52, 0.34),
         perceptual_roughness: 0.9,
-        cull_mode: None,
+        // Single-sided: backfaces were reading as “holes” without ambient fill.
         ..default()
     });
 
@@ -196,9 +209,14 @@ fn setup_scene(
             .iter()
             .filter(|(_, b)| *b == WorldBlockType::Leaf)
             .count();
+        let moss = content
+            .tree_and_rock_voxels
+            .iter()
+            .filter(|(_, b)| *b == WorldBlockType::Moss)
+            .count();
 
         eprintln!(
-            "panel {}: biome={:?} seed={} voxels={} (wood={} leaf={} stone={}) grass={}",
+            "panel {}: biome={:?} seed={} voxels={} (wood={} leaf={} stone={} moss={}) grass={}",
             panel.label,
             biome,
             panel.seed,
@@ -206,6 +224,7 @@ fn setup_scene(
             wood,
             leaf,
             stone,
+            moss,
             content.grass_instances.len(),
         );
 
@@ -226,6 +245,7 @@ fn setup_scene(
                 WorldBlockType::Wood => wood_material.clone(),
                 WorldBlockType::Leaf => leaf_material.clone(),
                 WorldBlockType::Stone => stone_material.clone(),
+                WorldBlockType::Moss => moss_material.clone(),
             };
             let translation = pos.as_vec3() + panel.display_offset;
             commands.spawn((
@@ -412,7 +432,7 @@ fn spawn_help_text(mut commands: Commands) {
         children![Text::new(concat!(
             "World preview: generate_chunk(), heightfield ground from height_at()\n",
             "Camera starts on Forest (side view) | Rocky center | Clearing right\n",
-            "Wood=brown Leaf=green Stone=grey | grass=cross-quads\n",
+            "Wood=brown Leaf=green Stone=grey Moss=dark-green | grass=cross-quads\n",
             "FreeCamera: WASD | Q/E | Shift | Scroll | Right-click/M look"
         ))],
     ));

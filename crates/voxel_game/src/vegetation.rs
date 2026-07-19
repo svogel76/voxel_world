@@ -2,15 +2,18 @@
 
 use bevy::prelude::*;
 use grass_generator::GrassVariant;
-use world_generator::{generate_chunk, Area, WorldBlockType};
+use world_generator::{classify, generate_chunk, Area, WorldBlockType};
 
 use crate::height::{WORLD_SEED, VoxelNoiseHeight};
 
 /// Fixed area near the origin so Phase 1 stays easy to find in-game.
+///
+/// Sized so Forest Poisson spacing (~7 m) can place more than one tree and
+/// fallen logs still fit after the 3–5 m trunk offset.
 fn vegetation_area() -> Area {
     Area {
-        min: Vec2::new(-8.0, -8.0),
-        max: Vec2::new(8.0, 8.0),
+        min: Vec2::new(-16.0, -16.0),
+        max: Vec2::new(16.0, 16.0),
     }
 }
 
@@ -22,6 +25,8 @@ pub fn spawn_vegetation_chunk(
 ) {
     let height = VoxelNoiseHeight::default_world();
     let area = vegetation_area();
+    let center = (area.min + area.max) * 0.5;
+    let biome = classify(center.x, center.y, WORLD_SEED, &height);
     let chunk = generate_chunk(WORLD_SEED, area, &height);
 
     let cube = meshes.add(Cuboid::from_length(1.0));
@@ -30,7 +35,7 @@ pub fn spawn_vegetation_chunk(
     let wood_mat = materials.add(textured("textures/wood.png", &asset_server, false));
     let leaf_mat = materials.add(textured("textures/leaf.png", &asset_server, false));
     let stone_mat = materials.add(textured("textures/stone.png", &asset_server, false));
-    // Moss tile: ferns for now; dedicated moss blocks come with Phase-3 blending.
+    let moss_mat = materials.add(textured("textures/moss.png", &asset_server, false));
     let grass_mat = materials.add(textured("textures/leaf.png", &asset_server, true));
     let fern_mat = materials.add(textured("textures/moss.png", &asset_server, true));
 
@@ -42,11 +47,16 @@ pub fn spawn_vegetation_chunk(
         ))
         .id();
 
+    let mut moss_count = 0usize;
     for (pos, block) in &chunk.tree_and_rock_voxels {
         let mat = match block {
             WorldBlockType::Wood => wood_mat.clone(),
             WorldBlockType::Leaf => leaf_mat.clone(),
             WorldBlockType::Stone => stone_mat.clone(),
+            WorldBlockType::Moss => {
+                moss_count += 1;
+                moss_mat.clone()
+            }
         };
         let child = commands
             .spawn((
@@ -89,8 +99,9 @@ pub fn spawn_vegetation_chunk(
     }
 
     info!(
-        "spawned vegetation chunk: {} voxels, {} grass in {:?}",
+        "spawned vegetation chunk: biome={biome:?} {} voxels ({} moss), {} grass in {:?}",
         chunk.tree_and_rock_voxels.len(),
+        moss_count,
         chunk.grass_instances.len(),
         area
     );

@@ -4,7 +4,7 @@ Kurzüberblick für Menschen und Agents: **wo stehen wir, was kommt als Nächste
 Detail-Checklisten und Entscheidungen bleiben in
 [`docs/Roadmap_Voxel_Atmosphere.md`](./docs/Roadmap_Voxel_Atmosphere.md).
 
-**Zuletzt aktualisiert:** 19.07.2026 (Phase 3.2 Holz/Moos/Blatt-Texturen)
+**Zuletzt aktualisiert:** 19.07.2026 (Forest-Biom-Kalibrierung + Moos-Sichtbarkeit)
 
 ---
 
@@ -23,7 +23,9 @@ Detail-Checklisten und Entscheidungen bleiben in
 | Sky-Mini | erledigt — Dome + Sonnen-Disc an `DayCycle` |
 | Phase 3.1 (Terrain-Array-Textur) | erledigt — prozedural → `voxel_game/assets/textures/terrain_array.png` |
 | Phase 3.2 (Holz/Stein/Moos/Blatt) | erledigt — Einzel-PNGs + Vegetation texturiert |
-| Phase 3 Rest (Moos-Übergänge, Tint) | offen |
+| Phase 3 Moos-Übergänge (Logs) | erledigt — `WorldBlockType::Moss` auf Fallstämmen |
+| Biom-Kalibrierung (Spawn) | `ROCKY_MIN_HEIGHT` 17 — Spawn nicht mehr 100 % Rocky |
+| Phase 3 Rest (Moos auf Stein, Vertex-Tint) | offen |
 
 ### Was läuft schon
 
@@ -38,6 +40,7 @@ Detail-Checklisten und Entscheidungen bleiben in
 - **Terrain-Texturen (3.1):** Noise-Layer in `world_generator::voxel_textures`,
   Asset `crates/voxel_game/assets/textures/terrain_array.png`, angebunden über `voxel_texture()`
 - **Vegetation-Texturen (3.2):** `wood` / `moss` / `leaf` / `stone` PNGs auf Baum-/Stein-Cubes
+- **Moos-Übergänge (Logs):** `fallen_log_moss_voxels` → `WorldBlockType::Moss` mit `moss.png`
 
 ### Maßstab (Weltziel)
 
@@ -51,8 +54,7 @@ Detail-Checklisten und Entscheidungen bleiben in
 
 ## Nächste Schritte (Reihenfolge)
 
-1. **Phase 3 fortsetzen** — Moos-Übergänge oder Vertex-Tint
-   (Initial-Texturen Holz/Stein/Moos sind prozedural erledigt)
+1. **Phase 3 fortsetzen** — Moos auf Steinen und/oder Vertex-Tint
 2. Später: Phase 4.5 (Skybox / Sterne / leichte Wolken), Phase 7 (Wetter)
 
 Ein Schritt, eine sichtbare Veränderung. Keine Phasen überspringen

@@ -18,8 +18,8 @@ pub use placement::{
 };
 pub use terrain::{ConstantHeight, SimpleNoiseTerrain, TerrainHeightSource};
 pub use understory::{
-    bush_cluster_voxels, fallen_log_voxels, fern_carpet_params, FOREST_FLOOR_DENSITY,
-    TRUNK_FERN_DENSITY,
+    bush_cluster_voxels, fallen_log_moss_voxels, fallen_log_voxels, fern_carpet_params,
+    FOREST_FLOOR_DENSITY, TRUNK_FERN_DENSITY,
 };
 pub use voxel_textures::{
     generate_layer, generate_terrain_array, BlockLayer, TerrainLayer, LAYER_COUNT, LAYER_DIRT,

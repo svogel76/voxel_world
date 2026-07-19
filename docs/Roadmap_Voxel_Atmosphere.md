@@ -226,7 +226,9 @@ nicht nur an Schatten und Console.
   → Phase 3.1: prozedurale 4-Layer-Array (`crates/voxel_game/assets/textures/terrain_array.png`),
   regenerierbar via `cargo run -p world_generator --example generate_terrain_textures`;
   `VoxelTerrain::voxel_texture` + Mapper `[top, sides, bottom]`
-- [ ] Moos-Übergänge zwischen Blocktypen (Blending oder Übergangs-Blocktypen)
+- [x] Moos-Übergänge zwischen Blocktypen (Blending oder Übergangs-Blocktypen)
+  → Fallstämme: `WorldBlockType::Moss` via `fallen_log_moss_voxels` (~55 % auf
+  oberer Log-Fläche); Stein-Moos / Terrain-Blending noch offen
 - [ ] Vertex-Color oder Tinting für natürliche Variation (kein repetitives Kachel-Muster)
 
 Meilenstein: Terrain-Oberflächen wirken materialhaft statt kachelig.
