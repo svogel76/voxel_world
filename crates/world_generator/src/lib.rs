@@ -22,6 +22,6 @@ pub use understory::{
     TRUNK_FERN_DENSITY,
 };
 pub use voxel_textures::{
-    generate_layer, generate_terrain_array, TerrainLayer, LAYER_COUNT, LAYER_DIRT,
+    generate_layer, generate_terrain_array, BlockLayer, TerrainLayer, LAYER_COUNT, LAYER_DIRT,
     LAYER_GRASS_SIDE, LAYER_GRASS_TOP, LAYER_SIZE, LAYER_STONE,
 };

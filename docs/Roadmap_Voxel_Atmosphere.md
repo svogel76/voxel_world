@@ -216,8 +216,12 @@ nicht nur an Schatten und Console.
 ---
 
 ## Phase 3 — Texturen & Materialien
-- [ ] Hochauflösendes Textur-Set für Holz/Stein/Moos beschaffen oder erstellen
-  (PBR: Albedo, Normal, Roughness — mindestens Normal Maps für Oberflächendetail)
+- [x] Stilisiertes Textur-Set für Holz/Stein/Moos (blocky, tilebar; Auflösung dem
+  Voxel-Maßstab anpassen — kein High-Res-Fotorealismus). Optional dezent PBR
+  (Normal/Roughness), nur wenn es dem Mood hilft, nicht als Pflicht.
+  → Phase 3.2: initiale Texturen **prozedural** (`wood` / `moss` / `leaf` / `stone`
+  PNGs + bestehende Terrain-Array); austauschbar über Dateien unter
+  `crates/voxel_game/assets/textures/`. Handgemalte/CC0-Packs später möglich.
 - [x] Texture-Atlas/Array-Setup für Voxel-Faces in bevy_voxel_world einrichten
   → Phase 3.1: prozedurale 4-Layer-Array (`crates/voxel_game/assets/textures/terrain_array.png`),
   regenerierbar via `cargo run -p world_generator --example generate_terrain_textures`;

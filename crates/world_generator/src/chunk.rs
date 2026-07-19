@@ -200,7 +200,9 @@ fn point_in_area(x: f32, z: f32, area: &Area) -> bool {
 fn stamp_grass_heights(grass: &mut [GrassInstance], terrain: &impl TerrainHeightSource) {
     for instance in grass {
         let p = instance.position;
-        instance.position.y = terrain.height_at(p.x, p.z);
+        // Same surface as voxel terrain top face (`floor(height)`), not the
+        // continuous noise value — otherwise grass floats above the mesh.
+        instance.position.y = surface_y(terrain, p.x, p.z) as f32;
     }
 }
 
@@ -214,10 +216,42 @@ fn place_rocks(
     let positions = sample_rock_positions(seed, area, params.rock_density, terrain);
     for pos in positions {
         let rock_seed = feature_seed(seed, ROCK_FEATURE_KIND, pos.x, pos.y);
-        let origin = world_origin(pos.x, pos.y, terrain);
         let voxels = generate_rock(rock_seed, &params.rock_params);
+        if voxels.is_empty() {
+            continue;
+        }
+        let origin = rock_origin_on_surface(pos.x, pos.y, &voxels, terrain);
         append_translated(voxels, origin, out);
     }
+}
+
+/// Place a rock so its lowest voxel rests on the terrain (no floating clumps).
+///
+/// Rocks are generated centered on the origin; after `keep_largest_component` the
+/// remaining shape often has `min_y >` the original bottom. Pinning `world_origin.y`
+/// to the surface then leaves the whole clump hovering. We also take the **max**
+/// surface under the footprint so overhangs on slopes do not float over dips.
+fn rock_origin_on_surface(
+    x: f32,
+    z: f32,
+    voxels: &[(IVec3, rock_generator::BlockType)],
+    terrain: &impl TerrainHeightSource,
+) -> IVec3 {
+    let ox = x.round() as i32;
+    let oz = z.round() as i32;
+    let min_local_y = voxels.iter().map(|(p, _)| p.y).min().unwrap_or(0);
+
+    let mut max_surface = i32::MIN;
+    for (p, _) in voxels {
+        let wx = ox + p.x;
+        let wz = oz + p.z;
+        max_surface = max_surface.max(surface_y(terrain, wx as f32, wz as f32));
+    }
+    if max_surface == i32::MIN {
+        max_surface = surface_y(terrain, x, z);
+    }
+
+    IVec3::new(ox, max_surface - min_local_y, oz)
 }
 
 /// Spatially varying density via accept/reject against the slope multiplier.
@@ -254,12 +288,21 @@ fn sample_rock_positions(
     positions
 }
 
+/// World-space origin for a feature at continuous `(x, z)`.
+///
+/// Y matches the **top face** of the voxel terrain column (`floor(height)`),
+/// consistent with `voxel_game::height::top_solid_y` + 1. Using `round` placed
+/// objects one block too high whenever the fractional height was ≥ 0.5.
 fn world_origin(x: f32, z: f32, terrain: &impl TerrainHeightSource) -> IVec3 {
     IVec3::new(
         x.round() as i32,
-        terrain.height_at(x, z).round() as i32,
+        surface_y(terrain, x, z),
         z.round() as i32,
     )
+}
+
+fn surface_y(terrain: &impl TerrainHeightSource, x: f32, z: f32) -> i32 {
+    terrain.height_at(x, z).floor() as i32
 }
 
 fn append_translated<B>(
@@ -331,6 +374,31 @@ mod tests {
             feature_seed(42, TREE_FEATURE_KIND, 1.0, 1.0),
             feature_seed(42, ROCK_FEATURE_KIND, 1.0, 1.0)
         );
+    }
+
+    #[test]
+    fn world_origin_y_matches_voxel_surface_not_rounded_height() {
+        // height 10.7 → voxel top solid at 9, walkable top face at 10 (= floor).
+        // `round` would wrongly place features at 11 (floating).
+        let terrain = ConstantHeight(10.7);
+        let origin = world_origin(1.2, -3.4, &terrain);
+        assert_eq!(origin.y, 10);
+        assert_eq!(surface_y(&terrain, 1.2, -3.4), 10);
+    }
+
+    #[test]
+    fn rock_origin_pins_lowest_voxel_to_surface() {
+        let terrain = ConstantHeight(10.0);
+        // Simulate a clump whose bottom was discarded (min local y = 1).
+        let voxels = vec![
+            (IVec3::new(0, 1, 0), rock_generator::BlockType::Stone),
+            (IVec3::new(1, 1, 0), rock_generator::BlockType::Stone),
+            (IVec3::new(0, 2, 0), rock_generator::BlockType::Stone),
+        ];
+        let origin = rock_origin_on_surface(3.2, -1.4, &voxels, &terrain);
+        assert_eq!(origin, IVec3::new(3, 9, -1)); // 10 - min_y(1) = 9
+        let settled_min = voxels.iter().map(|(p, _)| p.y + origin.y).min().unwrap();
+        assert_eq!(settled_min, 10);
     }
 
     #[test]

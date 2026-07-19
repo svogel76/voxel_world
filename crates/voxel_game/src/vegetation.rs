@@ -14,16 +14,11 @@ fn vegetation_area() -> Area {
     }
 }
 
-const COLOR_WOOD: Color = Color::srgb(0.42, 0.28, 0.16);
-const COLOR_LEAF: Color = Color::srgb(0.22, 0.48, 0.20);
-const COLOR_STONE: Color = Color::srgb(0.48, 0.48, 0.50);
-const COLOR_GRASS: Color = Color::srgb(0.30, 0.55, 0.22);
-const COLOR_FERN: Color = Color::srgb(0.18, 0.42, 0.22);
-
 pub fn spawn_vegetation_chunk(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     let height = VoxelNoiseHeight::default_world();
     let area = vegetation_area();
@@ -32,11 +27,12 @@ pub fn spawn_vegetation_chunk(
     let cube = meshes.add(Cuboid::from_length(1.0));
     let quad = meshes.add(Rectangle::new(1.0, 1.0));
 
-    let wood_mat = materials.add(unlitish(COLOR_WOOD));
-    let leaf_mat = materials.add(unlitish(COLOR_LEAF));
-    let stone_mat = materials.add(unlitish(COLOR_STONE));
-    let grass_mat = materials.add(cross_material(COLOR_GRASS));
-    let fern_mat = materials.add(cross_material(COLOR_FERN));
+    let wood_mat = materials.add(textured("textures/wood.png", &asset_server, false));
+    let leaf_mat = materials.add(textured("textures/leaf.png", &asset_server, false));
+    let stone_mat = materials.add(textured("textures/stone.png", &asset_server, false));
+    // Moss tile: ferns for now; dedicated moss blocks come with Phase-3 blending.
+    let grass_mat = materials.add(textured("textures/leaf.png", &asset_server, true));
+    let fern_mat = materials.add(textured("textures/moss.png", &asset_server, true));
 
     let root = commands
         .spawn((
@@ -56,7 +52,8 @@ pub fn spawn_vegetation_chunk(
             .spawn((
                 Mesh3d(cube.clone()),
                 MeshMaterial3d(mat),
-                Transform::from_translation(pos.as_vec3()),
+                // Bevy Cuboid is centered; +0.5 aligns with bvw cells [i, i+1].
+                Transform::from_translation(pos.as_vec3() + Vec3::splat(0.5)),
             ))
             .id();
         commands.entity(root).add_child(child);
@@ -99,20 +96,15 @@ pub fn spawn_vegetation_chunk(
     );
 }
 
-fn unlitish(color: Color) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color,
+fn textured(path: &'static str, assets: &AssetServer, masked: bool) -> StandardMaterial {
+    let mut mat = StandardMaterial {
+        base_color_texture: Some(assets.load(path)),
         perceptual_roughness: 0.9,
         ..default()
+    };
+    if masked {
+        mat.alpha_mode = AlphaMode::Mask(0.1);
+        mat.cull_mode = None;
     }
-}
-
-fn cross_material(color: Color) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color,
-        alpha_mode: AlphaMode::Mask(0.1),
-        cull_mode: None,
-        perceptual_roughness: 0.9,
-        ..default()
-    }
+    mat
 }
