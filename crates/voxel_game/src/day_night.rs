@@ -14,7 +14,7 @@ pub const DEFAULT_DAY_LENGTH_SECS: f32 = 600.0;
 /// Late morning — close to the static Phase-2 noon mood at first frame.
 pub const DEFAULT_TIME_OF_DAY: f32 = 0.35;
 
-const LOOK_TARGET: Vec3 = Vec3::new(0.0, 4.0, 0.0);
+pub(crate) const LOOK_TARGET: Vec3 = Vec3::new(0.0, 4.0, 0.0);
 const ORBIT_RADIUS: f32 = 45.0;
 const NOON_KEY_ILLUMINANCE: f32 = 80_000.0;
 const NOON_FILL_ILLUMINANCE: f32 = 5_500.0;
@@ -93,7 +93,6 @@ fn advance_day_cycle(time: Res<Time>, mut cycle: ResMut<DayCycle>) {
 fn apply_day_night(
     cycle: Res<DayCycle>,
     mut ambient: ResMut<GlobalAmbientLight>,
-    mut clear: ResMut<ClearColor>,
     mut key_q: Query<(&mut Transform, &mut DirectionalLight), With<KeySun>>,
     mut fill_q: Query<&mut DirectionalLight, (With<CoolFill>, Without<KeySun>)>,
     mut fog_q: Query<&mut FogVolume, With<SceneFogVolume>>,
@@ -125,11 +124,7 @@ fn apply_day_night(
         0.28 + 0.04 * day,
     );
 
-    clear.0 = Color::srgb(
-        0.02 + 0.04 * day,
-        0.025 + 0.045 * day,
-        0.04 + 0.04 * day,
-    );
+    // ClearColor / sky dome tint: `sky::update_sky_colors`.
 
     if let Ok(mut fog) = fog_q.single_mut() {
         fog.density_factor = fog_density_factor(&cycle, dawn_dusk);
@@ -167,12 +162,12 @@ fn fog_density_factor(cycle: &DayCycle, dawn_dusk: f32) -> f32 {
     }
 }
 
-struct SolarPhase {
-    day_factor: f32,
-    horizon_glow: f32,
+pub(crate) struct SolarPhase {
+    pub day_factor: f32,
+    pub horizon_glow: f32,
 }
 
-fn solar_phase(time_of_day: f32) -> SolarPhase {
+pub(crate) fn solar_phase(time_of_day: f32) -> SolarPhase {
     // -1 at midnight, 0 at sunrise/sunset, +1 at noon.
     let elev = -(time_of_day * TAU).cos();
     let day_factor = ((elev + 0.12) / 1.12).clamp(0.0, 1.0);
@@ -195,7 +190,7 @@ fn sun_transform(time_of_day: f32) -> Transform {
     Transform::from_translation(pos).looking_at(LOOK_TARGET, Vec3::Y)
 }
 
-fn key_sun_color(day: f32, dawn_dusk: f32) -> Color {
+pub(crate) fn key_sun_color(day: f32, dawn_dusk: f32) -> Color {
     // Warm noon, amber near horizon, cool when night takes over.
     let warm = Color::srgb(1.0, 0.96, 0.88);
     let amber = Color::srgb(1.0, 0.55, 0.28);
@@ -204,7 +199,7 @@ fn key_sun_color(day: f32, dawn_dusk: f32) -> Color {
     lerp_color(cool, day_color, (day + dawn_dusk * 0.5).clamp(0.0, 1.0))
 }
 
-fn lerp_color(a: Color, b: Color, t: f32) -> Color {
+pub(crate) fn lerp_color(a: Color, b: Color, t: f32) -> Color {
     let t = t.clamp(0.0, 1.0);
     let a = a.to_srgba();
     let b = b.to_srgba();

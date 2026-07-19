@@ -61,6 +61,6 @@ voxel-world/
 
 Aktueller Stand und nächste Schritte: **[`STATUS.md`](./STATUS.md)**.
 
-Kurz: Phase 1 / 1.5, Phase-2-Licht, Scale, Unterholz, Debug Console und
-Tag/Nacht sind umgesetzt. Als Nächstes: **Sky-Mini**, dann Texturen
+Kurz: Phase 1 / 1.5, Phase-2-Licht, Scale, Unterholz, Debug Console,
+Tag/Nacht und **Sky-Mini** sind umgesetzt. Als Nächstes: Texturen
 (Phase 3); Skybox/Sterne/Wolken und Wetter später (Phase 4.5 / 7).

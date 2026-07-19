@@ -4,7 +4,7 @@ Kurzüberblick für Menschen und Agents: **wo stehen wir, was kommt als Nächste
 Detail-Checklisten und Entscheidungen bleiben in
 [`docs/Roadmap_Voxel_Atmosphere.md`](./docs/Roadmap_Voxel_Atmosphere.md).
 
-**Zuletzt aktualisiert:** 19.07.2026 (Sky-Mini vor Phase 3 priorisiert)
+**Zuletzt aktualisiert:** 19.07.2026 (Sky-Mini abgeschlossen, Kamera-Pitch)
 
 ---
 
@@ -20,7 +20,7 @@ Detail-Checklisten und Entscheidungen bleiben in
 | Unterholz-Regeln | Farne / Büsche / Fallstämme in Forest-`generate_chunk` |
 | Debug Console | F1-Overlay + Keybinds in `voxel_game` |
 | Tag/Nacht-Zyklus | `DayCycle` steuert Key-Sun / Ambient / Fog |
-| Sky-Mini | als Nächstes (vor Phase 3) |
+| Sky-Mini | erledigt — Dome + Sonnen-Disc an `DayCycle` |
 | Phase 3–7 | noch nicht begonnen |
 
 ### Was läuft schon
@@ -31,6 +31,8 @@ Detail-Checklisten und Entscheidungen bleiben in
 - **Forest-Scale + Unterholz** in `generate_chunk`
 - **Debug Console:** `F1` / `` ` `` — Pause, Speed, Scrub, Fog, SSAO, Reset
 - **Tag/Nacht:** `DayCycle` (Default 10 min/Tag); pausierbar ohne Physik-Freeze
+- **Sky-Mini:** Unlit-Dome + `ClearColor` + Sonnen-Kugel (`sky.rs`) — abgeschlossen
+- **Kamera:** Yaw am Spieler, Pitch an `PlayerCamera` (`CameraPitch`, geclampt)
 
 ### Maßstab (Weltziel)
 
@@ -44,9 +46,8 @@ Detail-Checklisten und Entscheidungen bleiben in
 
 ## Nächste Schritte (Reihenfolge)
 
-1. **Sky-Mini** — Gradient-/Dome-Himmel an `DayCycle` (+ optional Sonnen-Billboard)
-2. **Phase 3 — Texturen & Materialien** — Atlas/PBR
-3. Später: Phase 4.5 (Skybox / Sterne / leichte Wolken), Phase 7 (Wetter)
+1. **Phase 3 — Texturen & Materialien** — Atlas/PBR
+2. Später: Phase 4.5 (Skybox / Sterne / leichte Wolken), Phase 7 (Wetter)
 
 Ein Schritt, eine sichtbare Veränderung. Keine Phasen überspringen
 (siehe Root-[`AGENTS.MD`](./AGENTS.MD)).

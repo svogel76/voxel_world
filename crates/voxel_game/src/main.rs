@@ -6,6 +6,7 @@ mod fps;
 mod height;
 mod lighting;
 mod player;
+mod sky;
 mod terrain;
 mod vegetation;
 
@@ -20,6 +21,9 @@ use lighting::{insert_mood_resources, setup_lights};
 use player::{
     attach_chunk_colliders, enable_player_on_terrain, player_look, player_move, spawn_player,
     PlayerCamera,
+};
+use sky::{
+    follow_camera_with_sky, spawn_sky, update_sky_colors, update_sky_sun,
 };
 use terrain::{TerrainCamera, VoxelTerrain};
 use vegetation::spawn_vegetation_chunk;
@@ -41,7 +45,7 @@ fn main() {
     .add_plugins(PhysicsPlugins::default())
     .add_systems(
         Startup,
-        (setup_lights, spawn_vegetation_chunk, spawn_player).chain(),
+        (setup_lights, spawn_sky, spawn_vegetation_chunk, spawn_player).chain(),
     )
     .add_systems(
         Update,
@@ -51,6 +55,9 @@ fn main() {
             enable_player_on_terrain,
             player_look,
             player_move,
+            update_sky_colors,
+            follow_camera_with_sky,
+            update_sky_sun,
         ),
     )
     .run();

@@ -196,14 +196,16 @@ Ohne lokale GPU-Validierung schwer zu iterieren; daher vor Phase 3:
 - [x] Tag/Nacht-Zyklus — Key-Sun-Orbit, Ambient/Clear/Fog über `DayCycle`
   (Default 10 min/Tag; Pause friert nicht die Physik ein)
 
-### Nächster Schritt — Sky-Mini (in `voxel_game`, vor Phase 3)
-Tag/Nacht steuert bisher nur Licht/Fog/`ClearColor` — der Himmel bleibt schwarz.
+### Sky-Mini (in `voxel_game`, vor Phase 3) — erledigt
+Tag/Nacht steuerte bisher nur Licht/Fog/`ClearColor` — der Himmel blieb schwarz.
 Ein kleiner Abschluss macht den Zyklus lesbar, ohne Wetter-Engine:
 
-- [ ] Sky-Dome oder Gradient-Himmel an `DayCycle` koppeln
+- [x] Sky-Dome oder Gradient-Himmel an `DayCycle` koppeln
   (Tag kühles Blau → Abend warm → Nacht dunkel)
-- [ ] Optional: Sonnen-Billboard entlang der Key-Sun-Richtung
+  → `sky.rs`: invertierte Unlit-Kugel + `ClearColor` über `sky_zenith_color`
+- [x] Optional: Sonnen-Billboard entlang der Key-Sun-Richtung
   (nur Optik; das Directional Light bleibt die echte Lichtquelle)
+  → `SkySun`-Kugel folgt Kamera + KeySun-Richtung, unsichtbar unter dem Horizont
 
 **Bewusst nicht in diesem Schritt:** Cubemap-Skybox, Sternenhimmel,
 volumetrische Wolken, Wetter — siehe Phase 4.5 und Phase 7.

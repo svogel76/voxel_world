@@ -15,14 +15,22 @@ const PLAYER_HEIGHT: f32 = 1.8;
 const MOVE_SPEED: f32 = 8.0;
 const JUMP_IMPULSE: f32 = 6.5;
 const MOUSE_SENS: f32 = 0.0025;
+/// Keep pitch away from ±90° so the view does not flip.
+const PITCH_LIMIT: f32 = std::f32::consts::FRAC_PI_2 - 0.05;
 const PLAYER_GRAVITY: f32 = 2.0;
 const SPAWN_CLEARANCE: f32 = 0.1;
+/// Third-person camera offset in player-local space (behind + slightly above).
+const CAMERA_OFFSET: Vec3 = Vec3::new(0.0, 1.6, 6.0);
 
 #[derive(Component)]
 pub struct Player;
 
 #[derive(Component)]
 pub struct PlayerCamera;
+
+/// Vertical look angle in radians (positive = look up). Applied only on the camera.
+#[derive(Component)]
+pub struct CameraPitch(pub f32);
 
 /// Gravity stays off until a terrain chunk collider covers the player.
 #[derive(Component)]
@@ -79,8 +87,10 @@ pub fn spawn_player(
             parent.spawn((
                 Name::new("PlayerCamera"),
                 PlayerCamera,
+                CameraPitch(0.0),
                 mood_camera_bundle(),
-                Transform::from_xyz(0.0, 1.6, 6.0).looking_at(Vec3::new(0.0, 1.2, 0.0), Vec3::Y),
+                // Face local −Z (world forward once the parent yaws). Pitch is applied in `player_look`.
+                Transform::from_translation(CAMERA_OFFSET),
             ));
         });
 }
@@ -112,18 +122,27 @@ pub fn enable_player_on_terrain(
         .remove::<WaitingForTerrain>();
 }
 
+/// Yaw on the player body, pitch on the camera (clamped so the view cannot flip).
 pub fn player_look(
     accumulated: Res<AccumulatedMouseMotion>,
     mut player_q: Query<&mut Transform, With<Player>>,
+    mut camera_q: Query<(&mut Transform, &mut CameraPitch), (With<PlayerCamera>, Without<Player>)>,
 ) {
-    let Ok(mut transform) = player_q.single_mut() else {
-        return;
-    };
     let delta = accumulated.delta;
     if delta == Vec2::ZERO {
         return;
     }
-    transform.rotate_y(-delta.x * MOUSE_SENS);
+
+    if let Ok(mut player_tf) = player_q.single_mut() {
+        player_tf.rotate_y(-delta.x * MOUSE_SENS);
+    }
+
+    if let Ok((mut cam_tf, mut pitch)) = camera_q.single_mut() {
+        // Mouse up (negative delta.y) increases pitch → look toward the sky.
+        pitch.0 = (pitch.0 - delta.y * MOUSE_SENS).clamp(-PITCH_LIMIT, PITCH_LIMIT);
+        cam_tf.translation = CAMERA_OFFSET;
+        cam_tf.rotation = Quat::from_rotation_x(pitch.0);
+    }
 }
 
 pub fn player_move(
