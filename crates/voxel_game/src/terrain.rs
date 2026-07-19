@@ -7,15 +7,21 @@ use std::sync::Arc;
 
 use bevy::prelude::*;
 use bevy_voxel_world::prelude::*;
+use world_generator::voxel_textures::{
+    LAYER_COUNT, LAYER_DIRT, LAYER_GRASS_SIDE, LAYER_GRASS_TOP, LAYER_STONE,
+};
 
 use crate::height::{top_solid_y, WORLD_SEED, VoxelNoiseHeight};
 
 /// Material indices written into [`WorldVoxel::Solid`].
-/// Mapped through [`VoxelWorldConfig::texture_index_mapper`] onto the default
-/// 4-layer texture shipped by `bevy_voxel_world` (textures come in Phase 3).
+/// Mapped through [`VoxelWorldConfig::texture_index_mapper`] onto layers in
+/// `assets/textures/terrain_array.png` under the `voxel_game` package (Phase 3.1).
 pub const MAT_DIRT: u8 = 0;
 pub const MAT_GRASS: u8 = 1;
 pub const MAT_STONE: u8 = 2;
+
+/// Stacked array texture path relative to the Bevy `assets/` folder.
+pub const TERRAIN_TEXTURE_PATH: &str = "textures/terrain_array.png";
 
 #[derive(Resource, Clone, Default)]
 pub struct VoxelTerrain;
@@ -39,11 +45,16 @@ impl VoxelWorldConfig for VoxelTerrain {
     fn texture_index_mapper(
         &self,
     ) -> Arc<dyn Fn(Self::MaterialIndex) -> [u32; 3] + Send + Sync> {
+        // `[top, sides, bottom]` into the stacked array texture.
         Arc::new(|mat| match mat {
-            MAT_GRASS => [1, 1, 1],
-            MAT_STONE => [2, 2, 2],
-            _ => [0, 0, 0],
+            MAT_GRASS => [LAYER_GRASS_TOP, LAYER_GRASS_SIDE, LAYER_DIRT],
+            MAT_STONE => [LAYER_STONE, LAYER_STONE, LAYER_STONE],
+            _ => [LAYER_DIRT, LAYER_DIRT, LAYER_DIRT],
         })
+    }
+
+    fn voxel_texture(&self) -> Option<(String, u32)> {
+        Some((TERRAIN_TEXTURE_PATH.into(), LAYER_COUNT))
     }
 }
 

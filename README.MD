@@ -62,5 +62,9 @@ voxel-world/
 Aktueller Stand und nächste Schritte: **[`STATUS.md`](./STATUS.md)**.
 
 Kurz: Phase 1 / 1.5, Phase-2-Licht, Scale, Unterholz, Debug Console,
-Tag/Nacht und **Sky-Mini** sind umgesetzt. Als Nächstes: Texturen
-(Phase 3); Skybox/Sterne/Wolken und Wetter später (Phase 4.5 / 7).
+Tag/Nacht, Sky-Mini und **Terrain-Array-Texturen (3.1)** sind umgesetzt.
+Als Nächstes: Phase 3 fortsetzen (PBR/Moos/Tint); Himmel/Wetter später
+(Phase 4.5 / 7).
+
+Texturen neu erzeugen:
+`cargo run -p world_generator --example generate_terrain_textures`

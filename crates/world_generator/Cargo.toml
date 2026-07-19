@@ -13,3 +13,4 @@ glam = { workspace = true }
 
 [dev-dependencies]
 bevy = { workspace = true, features = ["free_camera"] }
+image = "0.25"

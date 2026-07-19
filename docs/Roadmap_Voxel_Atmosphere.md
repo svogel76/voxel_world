@@ -218,7 +218,10 @@ nicht nur an Schatten und Console.
 ## Phase 3 — Texturen & Materialien
 - [ ] Hochauflösendes Textur-Set für Holz/Stein/Moos beschaffen oder erstellen
   (PBR: Albedo, Normal, Roughness — mindestens Normal Maps für Oberflächendetail)
-- [ ] Texture-Atlas/Array-Setup für Voxel-Faces in bevy_voxel_world einrichten
+- [x] Texture-Atlas/Array-Setup für Voxel-Faces in bevy_voxel_world einrichten
+  → Phase 3.1: prozedurale 4-Layer-Array (`crates/voxel_game/assets/textures/terrain_array.png`),
+  regenerierbar via `cargo run -p world_generator --example generate_terrain_textures`;
+  `VoxelTerrain::voxel_texture` + Mapper `[top, sides, bottom]`
 - [ ] Moos-Übergänge zwischen Blocktypen (Blending oder Übergangs-Blocktypen)
 - [ ] Vertex-Color oder Tinting für natürliche Variation (kein repetitives Kachel-Muster)
 
